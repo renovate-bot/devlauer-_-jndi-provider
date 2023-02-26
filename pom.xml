@@ -7,7 +7,7 @@
 	</parent>
 	<groupId>de.elnarion.jndi</groupId>
 	<artifactId>naming-server</artifactId>
-	<version>0.1.0</version>
+	<version>0.1.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 	<name>${project.groupId}:${project.artifactId}</name>
 	<description>A fork of JBoss JNPServer because it is not maintained anymore</description>
@@ -137,6 +137,6 @@
 		<url>http://github.com/devlauer/naming-server</url>
 		<connection>scm:git:git@github.com:devlauer/naming-server.git</connection>
 		<developerConnection>scm:git:git@github.com:devlauer/naming-server.git</developerConnection>
-	  <tag>naming-server-0.1.0</tag>
+	  <tag>HEAD</tag>
   </scm>
 </project>
