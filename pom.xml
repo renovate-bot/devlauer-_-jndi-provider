@@ -133,4 +133,9 @@
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
+	<scm>
+		<url>http://github.com/devlauer/naming-server</url>
+		<connection>scm:git:git@github.com:devlauer/naming-server.git</connection>
+		<developerConnection>scm:git:git@github.com:devlauer/naming-server.git</developerConnection>
+	</scm>
 </project>
