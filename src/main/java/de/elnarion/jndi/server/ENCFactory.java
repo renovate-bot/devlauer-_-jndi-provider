@@ -96,7 +96,7 @@ public class ENCFactory implements ObjectFactory {
 			return compCtx;
 		}
 		// Get naming for this component
-		ClassLoader ctxClassLoader = GetTCLAction.getContextClassLoader();
+		ClassLoader ctxClassLoader = this.getClass().getClassLoader();
 		synchronized (classloaderKeyedEncs) {
 			Context compCtx = (Context) classloaderKeyedEncs.get(ctxClassLoader);
 
@@ -106,10 +106,9 @@ public class ENCFactory implements ObjectFactory {
 			 */
 			if (compCtx == null) {
 				ClassLoader loader = ctxClassLoader;
-				GetParentAction action = new GetParentAction(ctxClassLoader);
 				while (loader != null && loader != topLoader && compCtx == null) {
 					compCtx = (Context) classloaderKeyedEncs.get(loader);
-					loader = action.getParent();
+					loader = this.getClass().getClassLoader();
 				}
 				// If we did not find an ENC create it
 				if (compCtx == null) {
@@ -136,36 +135,4 @@ public class ENCFactory implements ObjectFactory {
 		return new NamingContext(environment, null, srv);
 	}
 
-	private static class GetTCLAction implements PrivilegedAction {
-		static PrivilegedAction ACTION = new GetTCLAction();
-
-		public Object run() {
-			return Thread.currentThread().getContextClassLoader();
-		}
-
-		static ClassLoader getContextClassLoader() {
-			return (ClassLoader) AccessController.doPrivileged(ACTION);
-		}
 	}
-
-	private static class GetParentAction implements PrivilegedAction {
-		ClassLoader loader;
-
-		GetParentAction(ClassLoader loader) {
-			this.loader = loader;
-		}
-
-		public Object run() {
-			ClassLoader parent = null;
-			if (loader != null) {
-				parent = loader.getParent();
-				loader = parent;
-			}
-			return parent;
-		}
-
-		ClassLoader getParent() {
-			return (ClassLoader) AccessController.doPrivileged(this);
-		}
-	}
-}
