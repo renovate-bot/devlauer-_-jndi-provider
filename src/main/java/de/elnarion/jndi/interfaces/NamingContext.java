@@ -25,9 +25,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.lang.ref.WeakReference;
-import java.net.InetSocketAddress;
-import java.net.SocketException;
 import java.rmi.ConnectException;
 import java.rmi.MarshalledObject;
 import java.rmi.NoSuchObjectException;
@@ -39,7 +36,6 @@ import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.StringTokenizer;
-import java.util.concurrent.ConcurrentHashMap;
 
 import javax.naming.Binding;
 import javax.naming.CannotProceedException;
@@ -85,14 +81,6 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 */
 	static final long serialVersionUID = 8906455608484282128L;
 	/**
-	 * The local address to bind the connected bootstrap socket to
-	 */
-	public static final String JNP_LOCAL_ADDRESS = "jnp.localAddress";
-	/**
-	 * The local port to bind the connected bootstrap socket to
-	 */
-	public static final String JNP_LOCAL_PORT = "jnp.localPort";
-	/**
 	 * An internal property added by parseNameForScheme if the input name uses a url
 	 * prefix that was removed during cannonicalization. This is needed to avoid
 	 * modification of the incoming Name.
@@ -128,15 +116,6 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	public static final String JNP_UNORDERED_PROVIDER_LIST = "jnp.unorderedProviderList";
 
 	/**
-	 * Global JNP disable discovery system property:
-	 * -Djboss.global.jnp.disableDiscovery=[true|false] At the VM level, this
-	 * property controls how disable discovery behaves in absence of per context
-	 * jnp.disableDiscovery property.
-	 */
-	private static final boolean GLOBAL_JNP_DISABLE_DISCOVERY = Boolean
-			.valueOf(getSystemProperty("jboss.global.jnp.disableDiscovery", "false"));
-
-	/**
 	 * Global JNP unordered provider list system property:
 	 * -Djboss.global.jnp.unorderedProviderList=[true|false] At the VM level, this
 	 * property controls how unordered provider list behaves in absence of per
@@ -150,13 +129,6 @@ public class NamingContext implements EventContext, java.io.Serializable {
 		prop = System.getProperty(name, defaultValue);
 		return prop;
 	}
-
-	/**
-	 * The default discovery multicast information
-	 */
-	public final static String DEFAULT_DISCOVERY_GROUP_ADDRESS = "230.0.0.4";
-	public final static int DEFAULT_DISCOVERY_GROUP_PORT = 1102;
-	public final static int DEFAULT_DISCOVERY_TIMEOUT = 5000;
 
 	/**
 	 * An obsolete constant replaced by the JNP_MAX_RETRIES value
@@ -192,30 +164,9 @@ public class NamingContext implements EventContext, java.io.Serializable {
 
 	// Static --------------------------------------------------------
 
-	// Cache of naming server stubs
-	// This is a critical optimization in the case where new InitialContext
-	// is performed often. The server stub will be shared between all those
-	// calls, which will improve performance.
-	// Weak references are used so if no contexts use a particular server
-	// it will be removed from the cache.
-	static ConcurrentHashMap<InetSocketAddress, WeakReference<Naming>> cachedServers = new ConcurrentHashMap<InetSocketAddress, WeakReference<Naming>>();
-
-	static void addServer(InetSocketAddress addr, Naming server) {
-		// Add server to map
-		synchronized (NamingContext.class) {
-			WeakReference<Naming> ref = new WeakReference<Naming>(server);
-			cachedServers.put(addr, ref);
-		}
-	}
-
 	static void removeServer(Hashtable serverEnv) {
 		// JBAS-4622. Always do this.
 		Object hostKey = serverEnv.remove("hostKey");
-		if (hostKey != null) {
-			synchronized (NamingContext.class) {
-				cachedServers.remove(hostKey);
-			}
-		}
 	}
 
 	/**
@@ -1167,8 +1118,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 * the middle of an operation. If yes, we will flush out the naming stub from
 	 * our cache and acquire a new stub.
 	 *
-	 * Triggers on java.rmi.UnmarshalException wrapping a SocketException or
-	 * EOFException
+	 * Triggers on java.rmi.UnmarshalException wrapping a EOFException
 	 *
 	 * This must ONLY be used for idempotent operations where we don't care if the
 	 * server may have already processed the request!
@@ -1181,8 +1131,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 *         <code>false</code> otherwise.
 	 */
 	private boolean handleDyingServer(Exception e, Hashtable refEnv) {
-		if (e instanceof UnmarshalException && e.getCause() != null
-				&& (e.getCause() instanceof SocketException || e.getCause() instanceof EOFException)) {
+		if (e instanceof UnmarshalException && e.getCause() != null && (e.getCause() instanceof EOFException)) {
 			try {
 				if (log.isDebugEnabled()) {
 					log.debug("Call failed with UnmarshalException, " + "flushing server cache and retrying", e);
