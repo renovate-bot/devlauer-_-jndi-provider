@@ -148,12 +148,6 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 * @see {@linkplain LocalOnlyContextFactory}
 	 */
 	private static Naming localServer;
-	private static RuntimePermission GET_LOCAL_SERVER = new RuntimePermission(
-			"org.jboss.naming.NamingContext.getLocal");
-	private static RuntimePermission SET_LOCAL_SERVER = new RuntimePermission(
-			"org.jboss.naming.NamingContext.setLocal");
-	private static int HOST_INDEX = 0;
-	private static int PORT_INDEX = 1;
 
 	// Attributes ----------------------------------------------------
 	Naming naming;
@@ -171,15 +165,14 @@ public class NamingContext implements EventContext, java.io.Serializable {
 
 	/**
 	 * Called to remove any url scheme atoms and extract the naming service
-	 * hostname:port information.
-	 * 
+	 * information.
+	 *
 	 * @param n the name component to the parsed. After returning n will have all
 	 *          scheme related atoms removed.
-	 * @return the naming service hostname:port information string if name contained
-	 *         the host information.
+	 * @param nameEnv the name env
+	 * @throws InvalidNameException the invalid name exception
 	 */
-	static String parseNameForScheme(Name n, Hashtable nameEnv) throws InvalidNameException {
-		String serverInfo = null;
+	static void parseNameForScheme(Name n, Hashtable nameEnv) throws InvalidNameException {
 		if (n.size() > 0) {
 			String scheme = n.get(0);
 			int schemeLength = 0;
@@ -189,10 +182,6 @@ public class NamingContext implements EventContext, java.io.Serializable {
 				schemeLength = 4;
 			else if (scheme.startsWith("jnps:"))
 				schemeLength = 5;
-			else if (scheme.startsWith("jnp-http:"))
-				schemeLength = 9;
-			else if (scheme.startsWith("jnp-https:"))
-				schemeLength = 10;
 			if (schemeLength > 0) {
 				// Make a copy of the name to avoid
 				n = (Name) n.clone();
@@ -200,16 +189,6 @@ public class NamingContext implements EventContext, java.io.Serializable {
 				if (suffix.length() == 0) {
 					// Scheme was "url:/..."
 					n.remove(0);
-					if (n.size() > 1 && n.get(0).equals("")) {
-						// Scheme was "url://hostname:port/..."
-						// Get hostname:port value for the naming server
-						serverInfo = n.get(1);
-						n.remove(0);
-						n.remove(0);
-						// If n is a empty atom remove it or else a '/' will result
-						if (n.size() == 1 && n.get(0).length() == 0)
-							n.remove(0);
-					}
 				} else {
 					// Scheme was "url:foo" -> reinsert "foo"
 					n.remove(0);
@@ -219,7 +198,6 @@ public class NamingContext implements EventContext, java.io.Serializable {
 					nameEnv.put(JNP_PARSED_NAME, n);
 			}
 		}
-		return serverInfo;
 	}
 
 	public static Naming getLocal() {
@@ -1013,9 +991,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 						String url = tokenizer.nextToken();
 						// Parse the url into a host:port form, stripping any protocol
 						Name urlAsName = getNameParser("").parse(url);
-						String server = parseNameForScheme(urlAsName, null);
-						if (server != null)
-							url = server;
+						parseNameForScheme(urlAsName, null);
 					}
 					tokenizer = new StringTokenizer(urls, ",");
 				}
@@ -1025,9 +1001,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 						String url = tokenizer.nextToken();
 						// Parse the url into a host:port form, stripping any protocol
 						Name urlAsName = getNameParser("").parse(url);
-						String server = parseNameForScheme(urlAsName, null);
-						if (server != null)
-							url = server;
+						parseNameForScheme(urlAsName, null);
 					}
 				}
 
@@ -1068,12 +1042,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	private Hashtable getEnv(Name n) throws InvalidNameException {
 		Hashtable nameEnv = env;
 		env.remove(JNP_PARSED_NAME);
-		String serverInfo = parseNameForScheme(n, nameEnv);
-		if (serverInfo != null) {
-			// Set hostname:port value for the naming server
-			nameEnv = (Hashtable) env.clone();
-			nameEnv.put(Context.PROVIDER_URL, serverInfo);
-		}
+		parseNameForScheme(n, nameEnv);
 		return nameEnv;
 	}
 
