@@ -992,8 +992,6 @@ public class NamingContext implements EventContext, java.io.Serializable {
 
 	private void checkRef(Hashtable refEnv) throws NamingException {
 		if (naming == null) {
-			String host = "localhost";
-			int port = 1099;
 			Exception serverEx = null;
 
 			// Locate first available naming service

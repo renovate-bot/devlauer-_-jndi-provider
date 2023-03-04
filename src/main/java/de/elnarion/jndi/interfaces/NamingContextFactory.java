@@ -39,34 +39,11 @@ import javax.naming.spi.*;
 public class NamingContextFactory implements InitialContextFactory, ObjectFactory {
 	// InitialContextFactory implementation --------------------------
 	public Context getInitialContext(Hashtable env) throws NamingException {
-		String providerURL = (String) env.get(Context.PROVIDER_URL);
-		Name prefix = null;
-		/**
-		 * This may be a comma separated list of provider urls in which case we do not
-		 * parse the urls for the requested context prefix name
-		 */
-		int comma = providerURL != null ? providerURL.indexOf(',') : -1;
-		if (providerURL != null && comma < 0) {
-			Name name = new CompoundName(providerURL, NamingParser.syntax);
-			String serverInfo = NamingContext.parseNameForScheme(name, env);
-			if (serverInfo != null) {
-				env = (Hashtable) env.clone();
-				// Set hostname:port value for the naming server
-				env.put(Context.PROVIDER_URL, serverInfo);
-				// Set the context prefix to name
-				Name parsedName = (Name) env.get(NamingContext.JNP_PARSED_NAME);
-				if (parsedName != null)
-					prefix = parsedName;
-				else
-					prefix = name;
-			}
-		}
-		return new NamingContext(env, prefix, null);
+		return new NamingContext(env, null, null);
 	}
 
 	// ObjectFactory implementation ----------------------------------
 	public Object getObjectInstance(Object obj, Name name, Context nameCtx, Hashtable environment) throws Exception {
-//      System.out.println(obj+" "+name+" "+nameCtx+" "+environment);
 		Context ctx = getInitialContext(environment);
 		Reference ref = (Reference) obj;
 		return ctx.lookup((String) ref.get("URL").getContent());
