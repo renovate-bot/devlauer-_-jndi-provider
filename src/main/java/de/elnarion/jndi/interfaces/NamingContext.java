@@ -190,7 +190,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 
 	public static String getSystemProperty(final String name, final String defaultValue) {
 		String prop;
-			prop = System.getProperty(name, defaultValue);
+		prop = System.getProperty(name, defaultValue);
 		return prop;
 	}
 
@@ -211,24 +211,6 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	private static Logger log = LoggerFactory.getLogger(NamingContext.class);
 
 	// Static --------------------------------------------------------
-	/** HAJNDI keyed by partition name */
-	private static Hashtable<String, Naming> haServers = new Hashtable<String, Naming>();
-	private static RuntimePermission GET_HA_NAMING_SERVER = new RuntimePermission(
-			"org.jboss.naming.NamingContext.getHANamingServerForPartition");
-	private static RuntimePermission SET_HA_NAMING_SERVER = new RuntimePermission(
-			"org.jboss.naming.NamingContext.setHANamingServerForPartition");
-
-	public static void setHANamingServerForPartition(String partitionName, Naming haServer) {
-		haServers.put(partitionName, haServer);
-	}
-
-	public static void removeHANamingServerForPartition(String partitionName) {
-		haServers.remove(partitionName);
-	}
-
-	public static Naming getHANamingServerForPartition(String partitionName) {
-		return (Naming) haServers.get(partitionName);
-	}
 
 	/**
 	 * The jvm local server used for non-transport access to the naming server
@@ -261,20 +243,6 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	// it will be removed from the cache.
 	static ConcurrentHashMap<InetSocketAddress, WeakReference<Naming>> cachedServers = new ConcurrentHashMap<InetSocketAddress, WeakReference<Naming>>();
 
-	/**
-	 * @deprecated use {@link #addServer(InetSocketAddress, Naming)}
-	 * @param name
-	 * @param server
-	 */
-	static void addServer(String name, Naming server) {
-		Object[] hostAndPort = { name, 0 };
-		parseHostPort(name, hostAndPort, 0);
-		String host = (String) hostAndPort[HOST_INDEX];
-		Integer port = (Integer) hostAndPort[PORT_INDEX];
-		InetSocketAddress addr = new InetSocketAddress(host, port);
-		addServer(addr, server);
-	}
-
 	static void addServer(InetSocketAddress addr, Naming server) {
 		// Add server to map
 		synchronized (NamingContext.class) {
@@ -283,144 +251,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 		}
 	}
 
-	static Naming getServer(String host, int port, Hashtable serverEnv) throws NamingException {
-		return getServer(host, port, serverEnv, false);
-	}
-
-	static Naming getServer(String host, int port, Hashtable serverEnv, boolean cachedOnly) throws NamingException {
-		// Check the server cache for a host:port entry
-		InetSocketAddress key = new InetSocketAddress(host, port);
-		WeakReference<Naming> ref = cachedServers.get(key);
-		Naming server;
-		if (ref != null) {
-			server = (Naming) ref.get();
-			if (server != null) {
-				// JBAS-4622. Ensure the env for the request has the
-				// hostKey so we can remove the cache entry if there is a failure
-				serverEnv.put("hostKey", key);
-				return server;
-			}
-		}
-
-		if (cachedOnly)
-			return null;
-
-		// Server not found; add it to cache
-		try {
-			SocketFactory factory = loadSocketFactory(serverEnv);
-			Socket s;
-
-			try {
-				InetAddress localAddr = null;
-				int localPort = 0;
-				String localAddrStr = (String) serverEnv.get(JNP_LOCAL_ADDRESS);
-				String localPortStr = (String) serverEnv.get(JNP_LOCAL_PORT);
-				if (localAddrStr != null)
-					localAddr = InetAddress.getByName(localAddrStr);
-				if (localPortStr != null)
-					localPort = Integer.parseInt(localPortStr);
-				s = factory.createSocket(host, port, localAddr, localPort);
-			} catch (IOException e) {
-				NamingException ex = new ServiceUnavailableException("Failed to connect to server " + key);
-				ex.setRootCause(e);
-				throw ex;
-			}
-
-			// Get stub from naming server
-			BufferedInputStream bis = new BufferedInputStream(s.getInputStream());
-			ObjectInputStream in = new ObjectInputStream(bis);
-			MarshalledObject stub = (MarshalledObject) in.readObject();
-			server = (Naming) stub.get();
-			s.close();
-
-			// Add it to cache
-			addServer(key, server);
-			serverEnv.put("hostKey", key);
-
-			return server;
-		} catch (IOException e) {
-			if (log.isDebugEnabled())
-				log.debug("Failed to retrieve stub from server " + key, e);
-			NamingException ex = new CommunicationException("Failed to retrieve stub from server " + key);
-			ex.setRootCause(e);
-			throw ex;
-		} catch (Exception e) {
-			if (log.isDebugEnabled())
-				log.debug("Failed to connect server " + key, e);
-			NamingException ex = new CommunicationException("Failed to connect to server " + key);
-			ex.setRootCause(e);
-			throw ex;
-		}
-	}
-
-	/**
-	 * Create a SocketFactory based on the JNP_SOCKET_FACTORY property in the given
-	 * env. If JNP_SOCKET_FACTORY is not specified default to the
-	 * TimedSocketFactory.
-	 */
-	static SocketFactory loadSocketFactory(Hashtable serverEnv)
-			throws ClassNotFoundException, IllegalAccessException, InstantiationException, InvocationTargetException {
-		SocketFactory factory = null;
-
-		// Get the socket factory classname
-		String socketFactoryName = (String) serverEnv.get(JNP_SOCKET_FACTORY);
-		if (socketFactoryName == null || socketFactoryName.equals(TimedSocketFactory.class.getName())) {
-			factory = new TimedSocketFactory(serverEnv);
-			return factory;
-		}
-
-		/*
-		 * Create the socket factory. Look for a ctor that accepts a Hashtable and if
-		 * not found use the default ctor.
-		 */
-		ClassLoader loader = Thread.currentThread().getContextClassLoader();
-		Class factoryClass = loader.loadClass(socketFactoryName);
-		try {
-			Class[] ctorSig = { Hashtable.class };
-			Constructor ctor = factoryClass.getConstructor(ctorSig);
-			Object[] ctorArgs = { serverEnv };
-			factory = (SocketFactory) ctor.newInstance(ctorArgs);
-		} catch (NoSuchMethodException e) {
-			// Use the default ctor
-			factory = (SocketFactory) factoryClass.newInstance();
-		}
-		return factory;
-	}
-
 	static void removeServer(Hashtable serverEnv) {
-		String host = "localhost";
-		int port = 1099;
-
-		// Locate naming service
-		if (serverEnv.get(Context.PROVIDER_URL) != null) {
-			String providerURL = (String) serverEnv.get(Context.PROVIDER_URL);
-
-			StringTokenizer tokenizer = new StringTokenizer(providerURL, ", ");
-			while (tokenizer.hasMoreElements()) {
-				String url = tokenizer.nextToken();
-
-				try {
-					// Parse the url into a host:port form, stripping any protocol
-					Name urlAsName = new NamingParser().parse(url);
-					String server = parseNameForScheme(urlAsName, null);
-					if (server != null)
-						url = server;
-
-					Object[] hostAndPort = { url, 1099 };
-					parseHostPort(url, hostAndPort, 1099);
-					host = (String) hostAndPort[HOST_INDEX];
-					port = (Integer) hostAndPort[PORT_INDEX];
-
-					// Remove server from map
-					synchronized (NamingContext.class) {
-						InetSocketAddress key = new InetSocketAddress(host, port);
-						cachedServers.remove(key);
-					}
-				} catch (NamingException ignored) {
-				}
-			}
-		}
-
 		// JBAS-4622. Always do this.
 		Object hostKey = serverEnv.remove("hostKey");
 		if (hostKey != null) {
@@ -1171,7 +1002,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 */
 	private Object createMarshalledValuePair(final Object obj) throws IOException {
 		MarshalledValuePair mvp = null;
-			mvp = new MarshalledValuePair(obj);
+		mvp = new MarshalledValuePair(obj);
 		return mvp;
 	}
 
@@ -1251,174 +1082,6 @@ public class NamingContext implements EventContext, java.io.Serializable {
 		}
 	}
 
-	/**
-	 * This methods sends a broadcast message on the network and asks and HA-JNDI
-	 * server to sent it the HA-JNDI stub
-	 */
-	private Naming discoverServer(Hashtable serverEnv) throws NamingException {
-		boolean debug = log.isDebugEnabled();
-		// Check if discovery should be done
-		String disableDiscovery = (String) serverEnv.get(JNP_DISABLE_DISCOVERY);
-
-		if (!shouldDiscoveryHappen(GLOBAL_JNP_DISABLE_DISCOVERY, disableDiscovery)) {
-			return null;
-		}
-
-		if (Boolean.valueOf(disableDiscovery) == Boolean.TRUE) {
-			if (debug)
-				log.debug("Skipping discovery due to disable flag");
-			return null;
-		}
-
-		// we first try to discover the server locally
-		//
-		String partitionName = (String) serverEnv.get(JNP_PARTITION_NAME);
-		Naming server = null;
-		if (partitionName != null) {
-			server = getHANamingServerForPartition(partitionName);
-			if (server != null)
-				return server;
-		}
-
-		// We next broadcast a HelloWorld datagram (multicast)
-		// Any listening server will answer with its IP address:port in another datagram
-		// we will then use this to make a standard "lookup"
-		//
-		MulticastSocket s = null;
-		InetAddress iaGroup = null;
-		try {
-			String group = DEFAULT_DISCOVERY_GROUP_ADDRESS;
-			int port = DEFAULT_DISCOVERY_GROUP_PORT;
-			int timeout = DEFAULT_DISCOVERY_TIMEOUT;
-			int ttl = 16;
-
-			String discoveryGroup = (String) serverEnv.get(JNP_DISCOVERY_GROUP);
-			if (discoveryGroup != null)
-				group = discoveryGroup;
-
-			String discoveryTTL = (String) serverEnv.get(JNP_DISCOVERY_TTL);
-			if (discoveryTTL != null)
-				ttl = Integer.parseInt(discoveryTTL);
-
-			String discoveryTimeout = (String) serverEnv.get(JNP_DISCOVERY_TIMEOUT);
-			if (discoveryTimeout == null) {
-				// Check the old property name
-				discoveryTimeout = (String) serverEnv.get("DISCOVERY_TIMEOUT");
-			}
-			if (discoveryTimeout != null && !discoveryTimeout.equals(""))
-				timeout = Integer.parseInt(discoveryTimeout);
-
-			String discoveryGroupPort = (String) serverEnv.get(JNP_DISCOVERY_PORT);
-			if (discoveryGroupPort == null) {
-				// Check the old property name
-				discoveryGroupPort = (String) serverEnv.get("DISCOVERY_GROUP");
-			}
-			if (discoveryGroupPort != null && !discoveryGroupPort.equals("")) {
-				int colon = discoveryGroupPort.indexOf(':');
-				if (colon < 0) {
-					// No group given, just the port
-					try {
-						port = Integer.parseInt(discoveryGroupPort);
-					} catch (Exception ex) {
-						log.warn("Failed to parse port: " + discoveryGroupPort, ex);
-					}
-				} else {
-					// The old group:port syntax was given
-					group = discoveryGroupPort.substring(0, colon);
-					String portStr = discoveryGroupPort.substring(colon + 1);
-					try {
-						port = Integer.parseInt(portStr);
-					} catch (Exception ex) {
-						log.warn("Failed to parse port: " + portStr, ex);
-					}
-				}
-			}
-
-			iaGroup = InetAddress.getByName(group);
-			String localAddrStr = (String) serverEnv.get(JNP_LOCAL_ADDRESS);
-			String localPortStr = (String) serverEnv.get(JNP_LOCAL_PORT);
-			int localPort = 0;
-			if (localPortStr != null)
-				localPort = Integer.parseInt(localPortStr);
-			if (localAddrStr != null) {
-				InetSocketAddress localAddr = new InetSocketAddress(localAddrStr, localPort);
-				s = new MulticastSocket(localAddr);
-				InetAddress sendAddress = localAddr.getAddress();
-				if (sendAddress.isAnyLocalAddress() == false) {
-					s.setInterface(sendAddress);
-				}
-			} else {
-				s = new MulticastSocket(localPort);
-			}
-			s.setSoTimeout(timeout);
-			s.setTimeToLive(ttl);
-			if (log.isDebugEnabled())
-				log.debug("TTL on multicast discovery socket is " + ttl);
-			// JBNAME-47 There is no need to join the group to send to it.
-			// Joining just raises the (slight) possibility of incorrectly receiving
-			// someone else's multicast discovery message instead of unicast reply
-//         s.joinGroup(iaGroup);
-			if (debug)
-				log.debug("MulticastSocket: " + s);
-			DatagramPacket packet;
-			// Send a request optionally restricted to a cluster partition
-			StringBuffer data = new StringBuffer("GET_ADDRESS");
-			if (partitionName != null)
-				data.append(":" + partitionName);
-			byte[] buf = data.toString().getBytes();
-			packet = new DatagramPacket(buf, buf.length, iaGroup, port);
-			if (debug)
-				log.debug("Sending discovery packet(" + data + ") to: " + iaGroup + ":" + port);
-			s.send(packet);
-			// Look for a reply
-			// IP address + port number = 128.128.128.128:65535 => (12+3) + 1 + (5) = 21
-
-			buf = new byte[50];
-			packet = new DatagramPacket(buf, buf.length);
-			s.receive(packet);
-			String myServer = new String(packet.getData()).trim();
-			if (debug)
-				log.debug("Received answer packet: " + myServer);
-			while (myServer != null && myServer.startsWith("GET_ADDRESS")) {
-				Arrays.fill(buf, (byte) 0);
-				packet.setLength(buf.length);
-				s.receive(packet);
-				byte[] reply = packet.getData();
-				myServer = new String(reply).trim();
-				if (debug)
-					log.debug("Received answer packet: " + myServer);
-			}
-			String serverHost;
-			int serverPort;
-
-			Object[] hostAndPort = { myServer, 0 };
-			parseHostPort(myServer, hostAndPort, DEFAULT_DISCOVERY_GROUP_PORT);
-			serverHost = (String) hostAndPort[HOST_INDEX];
-			serverPort = (Integer) hostAndPort[PORT_INDEX];
-			if (serverHost != null) {
-				server = getServer(serverHost, serverPort, serverEnv);
-			}
-			return server;
-		} catch (IOException e) {
-			if (debug)
-				log.debug("Discovery failed", e);
-			NamingException ex = new CommunicationException(e.getMessage());
-			ex.setRootCause(e);
-			throw ex;
-		} finally {
-			try {
-				if (s != null)
-					s.leaveGroup(iaGroup);
-			} catch (Exception ignore) {
-			}
-			try {
-				if (s != null)
-					s.close();
-			} catch (Exception ignore) {
-			}
-		}
-	}
-
 	private void checkRef(Hashtable refEnv) throws NamingException {
 		if (naming == null) {
 			String host = "localhost";
@@ -1447,18 +1110,6 @@ public class NamingContext implements EventContext, java.io.Serializable {
 						String server = parseNameForScheme(urlAsName, null);
 						if (server != null)
 							url = server;
-						//
-						Object[] hostAndPort = { url, 0 };
-						parseHostPort(url, hostAndPort, 1099);
-						host = (String) hostAndPort[HOST_INDEX];
-						port = (Integer) hostAndPort[PORT_INDEX];
-						try {
-							// Get server from cache
-							naming = getServer(host, port, refEnv, true);
-						} catch (Exception e) {
-							serverEx = e;
-							log.debug("Error retrieving cached connection to " + host + ":" + port, e);
-						}
 					}
 					tokenizer = new StringTokenizer(urls, ",");
 				}
@@ -1471,31 +1122,12 @@ public class NamingContext implements EventContext, java.io.Serializable {
 						String server = parseNameForScheme(urlAsName, null);
 						if (server != null)
 							url = server;
-						//
-						Object[] hostAndPort = { url, 0 };
-						parseHostPort(url, hostAndPort, 1099);
-						host = (String) hostAndPort[HOST_INDEX];
-						port = (Integer) hostAndPort[PORT_INDEX];
-						try {
-							// Get server from cache
-							naming = getServer(host, port, refEnv);
-						} catch (Exception e) {
-							serverEx = e;
-							log.debug("Failed to connect to " + host + ":" + port, e);
-						}
 					}
 				}
 
 				// If there is still no server, try discovery
 				Exception discoveryFailure = null;
 				if (naming == null) {
-					try {
-						naming = discoverServer(refEnv);
-					} catch (Exception e) {
-						discoveryFailure = e;
-						if (serverEx == null)
-							serverEx = e;
-					}
 					if (naming == null) {
 						StringBuffer buffer = new StringBuffer(50);
 						buffer.append("Could not obtain connection to any of these urls: ").append(urls);
@@ -1512,113 +1144,10 @@ public class NamingContext implements EventContext, java.io.Serializable {
 					}
 				}
 			} else {
-				// If we are in a clustering scenario, the client code may request a context
-				// for a *specific* HA-JNDI service (i.e. linked to a *specific* partition)
-				// EVEN if the lookup is done inside a JBoss VM. For example, a JBoss service
-				// may do a lookup on a HA-JNDI service running on another host *without*
-				// explicitly providing a PROVIDER_URL but simply by providing a
-				// JNP_PARTITON_NAME
-				// parameter so that dynamic discovery can be used
-				//
-				String jnpPartitionName = (String) refEnv.get(JNP_PARTITION_NAME);
-				if (jnpPartitionName != null) {
-					// the client is requesting for a specific partition name
-					//
-					naming = discoverServer(refEnv);
-					if (naming == null)
-						throw new ConfigurationException(
-								"No valid context could be build for jnp.partitionName=" + jnpPartitionName);
-				} else {
-					// Use server in same JVM
-					naming = localServer;
-
-					if (naming == null) {
-						naming = discoverServer(refEnv);
-						if (naming == null)
-							// Local, but no local JNDI provider found!
-							throw new ConfigurationException("No valid Context.PROVIDER_URL was found");
-					}
-				}
+				// Use server in same JVM
+				naming = localServer;
 			}
 		}
-	}
-
-	/**
-	 * Parse a naming provider url for the host/port information
-	 * 
-	 * @param url         - the naming provider url string to parse
-	 * @param output,     [0] = the host name/address, [1] = the parsed port as an
-	 *                    Integer
-	 * @param defaultPort - the default port to return in output[1] if no port was
-	 *                    seen in the url string.
-	 * @return the index of the port separator if found, -1 otherwise.
-	 */
-	static private int parseHostPort(String url, Object[] output, int defaultPort) {
-		// First look for a @ separating the host and port
-
-		int colon = url.indexOf('@');
-		String host = null;
-		int port = defaultPort;
-
-		if (colon < 0) {
-			// <IPv4>, <IPv4>:port, [<IPv6>] or [<IPv6>]:port
-			colon = url.indexOf(':');
-			int rightbracket = url.indexOf(']');
-			int lastcolon = url.lastIndexOf(':');
-
-			if (rightbracket < 0) {
-				// If there are multiple ':' assume its an IPv6 address
-				int firstColon = url.indexOf(':');
-				if (lastcolon > firstColon)
-					colon = lastcolon;
-
-				// assume IPv4 host port combination
-				if (colon < 0) {
-					host = url.trim();
-				} else {
-					host = url.substring(0, colon).trim();
-					try {
-						port = Integer.parseInt(url.substring(colon + 1).trim());
-					} catch (Exception ex) {
-						// Use default;
-					}
-				}
-			} else {
-				// assume IPv6 host port combination
-				if (lastcolon < rightbracket) {
-					host = url.substring(1, rightbracket).trim();
-				} else {
-					host = url.substring(1, rightbracket).trim();
-					try {
-						port = Integer.parseInt(url.substring(lastcolon + 1).trim());
-					} catch (Exception ex) {
-						// Use default;
-					}
-				}
-			}
-		} else {
-			// <IPv6>@port, If there are multiple ':' assume its an IPv6 address
-			colon = url.lastIndexOf(':');
-			int firstColon = url.indexOf(':');
-			if (colon > firstColon)
-				colon = -1;
-			if (colon < 0) {
-				host = url;
-				port = defaultPort;
-			} else {
-				host = url.substring(0, colon);
-				try {
-					port = Integer.parseInt(url.substring(colon + 1).trim());
-				} catch (Exception ex) {
-					// Use default port
-					port = defaultPort;
-				}
-			}
-		}
-
-		output[HOST_INDEX] = host;
-		output[PORT_INDEX] = new Integer(port);
-		return colon;
 	}
 
 	private Name getAbsoluteName(Name n) throws NamingException {
