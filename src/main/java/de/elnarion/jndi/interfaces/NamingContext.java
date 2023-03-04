@@ -21,32 +21,19 @@
   */
 package de.elnarion.jndi.interfaces;
 
-import java.io.BufferedInputStream;
 import java.io.EOFException;
 import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.ref.WeakReference;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.net.DatagramPacket;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.MulticastSocket;
-import java.net.Socket;
 import java.net.SocketException;
 import java.rmi.ConnectException;
 import java.rmi.MarshalledObject;
 import java.rmi.NoSuchObjectException;
 import java.rmi.RemoteException;
 import java.rmi.UnmarshalException;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.Hashtable;
@@ -57,7 +44,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.naming.Binding;
 import javax.naming.CannotProceedException;
 import javax.naming.CommunicationException;
-import javax.naming.ConfigurationException;
 import javax.naming.Context;
 import javax.naming.ContextNotEmptyException;
 import javax.naming.InitialContext;
@@ -75,7 +61,6 @@ import javax.naming.event.EventContext;
 import javax.naming.event.NamingListener;
 import javax.naming.spi.NamingManager;
 import javax.naming.spi.ResolveResult;
-import javax.net.SocketFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -100,10 +85,6 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 */
 	static final long serialVersionUID = 8906455608484282128L;
 	/**
-	 * The javax.net.SocketFactory impl to use for the bootstrap socket
-	 */
-	public static final String JNP_SOCKET_FACTORY = "jnp.socketFactory";
-	/**
 	 * The local address to bind the connected bootstrap socket to
 	 */
 	public static final String JNP_LOCAL_ADDRESS = "jnp.localAddress";
@@ -111,30 +92,6 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 * The local port to bind the connected bootstrap socket to
 	 */
 	public static final String JNP_LOCAL_PORT = "jnp.localPort";
-	/**
-	 * A flag to disable the broadcast discovery queries
-	 */
-	public static final String JNP_DISABLE_DISCOVERY = "jnp.disableDiscovery";
-	/**
-	 * The cluster partition discovery should be restricted to
-	 */
-	public static final String JNP_PARTITION_NAME = "jnp.partitionName";
-	/**
-	 * The multicast IP/address to which the discovery query is sent
-	 */
-	public static final String JNP_DISCOVERY_GROUP = "jnp.discoveryGroup";
-	/**
-	 * The port to which the discovery query is sent
-	 */
-	public static final String JNP_DISCOVERY_PORT = "jnp.discoveryPort";
-
-	/** The time-to-live for the multicast discovery packets */
-	public static final String JNP_DISCOVERY_TTL = "jnp.discoveryTTL";
-
-	/**
-	 * The time in MS to wait for a discovery query response
-	 */
-	public static final String JNP_DISCOVERY_TIMEOUT = "jnp.discoveryTimeout";
 	/**
 	 * An internal property added by parseNameForScheme if the input name uses a url
 	 * prefix that was removed during cannonicalization. This is needed to avoid
