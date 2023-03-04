@@ -60,16 +60,11 @@ public class NamingBeanImpl implements NamingBean {
 	 * The plugin for the manager which dispatches EventContext events to listeners
 	 */
 	private EventMgr eventMgr;
-	/** The SecurityManager */
-	private SecurityManager securityMgr;
 
 	/** Whether or not to setup java:comp during startup */
 	private boolean installJavaComp = true;
 
-	// Static --------------------------------------------------------
-	public static void main(String[] args) throws Exception {
-		new Main().start();
-	}
+
 
 	// Constructors --------------------------------------------------
 	public NamingBeanImpl() {
@@ -104,14 +99,6 @@ public class NamingBeanImpl implements NamingBean {
 		this.eventMgr = eventMgr;
 	}
 
-	public SecurityManager getSecurityMgr() {
-		return securityMgr;
-	}
-
-	public void setSecurityMgr(SecurityManager securityMgr) {
-		this.securityMgr = securityMgr;
-	}
-
 	/**
 	 * Util method for possible override.
 	 *
@@ -119,7 +106,7 @@ public class NamingBeanImpl implements NamingBean {
 	 * @throws Exception for any error
 	 */
 	protected Naming createServer() throws Exception {
-		return new NamingServer(null, null, eventMgr, securityMgr);
+		return new NamingServer(null, null, eventMgr);
 	}
 
 	public boolean getInstallJavaComp() {

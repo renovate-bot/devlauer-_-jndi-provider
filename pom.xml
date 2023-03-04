@@ -6,7 +6,7 @@
 		<version>2.0.7</version>
 	</parent>
 	<groupId>de.elnarion.jndi</groupId>
-	<artifactId>naming-server</artifactId>
+	<artifactId>jndi-provider</artifactId>
 	<version>0.1.2-SNAPSHOT</version>
 	<packaging>jar</packaging>
 	<name>${project.groupId}:${project.artifactId}</name>
@@ -137,6 +137,6 @@
 		<url>http://github.com/devlauer/naming-server</url>
 		<connection>scm:git:git@github.com:devlauer/naming-server.git</connection>
 		<developerConnection>scm:git:git@github.com:devlauer/naming-server.git</developerConnection>
-	  <tag>HEAD</tag>
-  </scm>
+		<tag>HEAD</tag>
+	</scm>
 </project>

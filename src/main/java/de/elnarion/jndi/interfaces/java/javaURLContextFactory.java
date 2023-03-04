@@ -44,12 +44,10 @@ public class javaURLContextFactory implements ObjectFactory {
 	private static ThreadLocal server = new ThreadLocal();
 
 	public static void setRoot(Naming srv) {
-		// TODO: Add security check here
 		server.set(srv);
 	}
 
 	public static Naming getRoot() {
-		// TODO: Add security check here
 		return (Naming) server.get();
 	}
 

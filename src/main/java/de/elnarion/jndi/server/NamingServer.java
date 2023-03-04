@@ -75,7 +75,6 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 	private transient EventListeners listeners;
 	/** The manager for EventContext listeners */
 	private transient EventMgr eventMgr;
-	private transient SecurityManager secMgr;
 	private transient boolean debug;
 
 	// Static --------------------------------------------------------
@@ -91,17 +90,11 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 	}
 
 	public NamingServer(Name prefix, NamingServer parent, EventMgr eventMgr) throws NamingException {
-		this(prefix, parent, eventMgr, null);
-	}
-
-	public NamingServer(Name prefix, NamingServer parent, EventMgr eventMgr, SecurityManager secMgr)
-			throws NamingException {
 		if (prefix == null)
 			prefix = parser.parse("");
 		this.prefix = prefix;
 		this.parent = parent;
 		this.eventMgr = eventMgr;
-		this.secMgr = secMgr;
 		this.debug = log.isDebugEnabled();
 	}
 
@@ -177,11 +170,6 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 				} catch (NameNotFoundException e) {
 					Name fullName = (Name) prefix.clone();
 					fullName.addAll(name);
-					SecurityManager sm = getSecurityManager();
-					if (sm != null) {
-						JndiPermission perm = new JndiPermission(fullName, JndiPermission.BIND);
-						sm.checkPermission(perm);
-					}
 
 					Binding newb = setBinding(name, obj, className);
 					// Notify event listeners
@@ -221,14 +209,9 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 			if (name.get(0).equals("")) {
 				throw new InvalidNameException("An empty name cannot be passed to rebind");
 			} else {
-				SecurityManager sm = getSecurityManager();
 				Name fullName = (Name) prefix.clone();
 				String comp = name.get(0);
 				fullName.add(comp);
-				if (sm != null) {
-					JndiPermission perm = new JndiPermission(fullName, JndiPermission.REBIND);
-					sm.checkPermission(perm);
-				}
 
 				Binding oldb = table.get(comp);
 				Binding newb = setBinding(name, obj, className);
@@ -274,13 +257,8 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 			} else {
 //            System.out.println("unbind "+name+"="+getBinding(name));
 				if (getBinding(name) != null) {
-					SecurityManager sm = getSecurityManager();
 					Name fullName = (Name) prefix.clone();
 					fullName.addAll(name);
-					if (sm != null) {
-						JndiPermission perm = new JndiPermission(fullName, JndiPermission.UNBIND);
-						sm.checkPermission(perm);
-					}
 
 					Binding newb = null;
 					Binding oldb = removeBinding(name);
@@ -298,11 +276,6 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 	public Object lookup(Name name) throws NamingException {
 		Object result;
 		if (name.isEmpty()) {
-			SecurityManager sm = getSecurityManager();
-			if (sm != null) {
-				JndiPermission perm = new JndiPermission(prefix, JndiPermission.LOOKUP);
-				sm.checkPermission(perm);
-			}
 
 			// Return this
 			result = new NamingContext(null, (Name) (prefix.clone()), getRoot());
@@ -329,21 +302,11 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 		} else {
 			// Get object to return
 			if (name.get(0).equals("")) {
-				SecurityManager sm = getSecurityManager();
-				if (sm != null) {
-					JndiPermission perm = new JndiPermission(prefix, JndiPermission.LOOKUP);
-					sm.checkPermission(perm);
-				}
 				result = new NamingContext(null, (Name) (prefix.clone()), getRoot());
 			} else {
 //            System.out.println("lookup "+name);
-				SecurityManager sm = getSecurityManager();
 				Name fullName = (Name) (prefix.clone());
 				fullName.addAll(name);
-				if (sm != null) {
-					JndiPermission perm = new JndiPermission(fullName, JndiPermission.LOOKUP);
-					sm.checkPermission(perm);
-				}
 
 				Object res = getObject(name);
 
@@ -359,12 +322,6 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 
 	public Collection<NameClassPair> list(Name name) throws NamingException {
 		if (name.isEmpty()) {
-			SecurityManager sm = getSecurityManager();
-			if (sm != null) {
-				JndiPermission perm = new JndiPermission(prefix, JndiPermission.LIST);
-				sm.checkPermission(perm);
-			}
-
 			ArrayList<NameClassPair> list = new ArrayList<NameClassPair>();
 			for (Binding b : table.values()) {
 				NameClassPair ncp = new NameClassPair(b.getName(), b.getClassName(), true);
@@ -393,12 +350,6 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 
 	public Collection<Binding> listBindings(Name name) throws NamingException {
 		if (name.isEmpty()) {
-			SecurityManager sm = getSecurityManager();
-			if (sm != null) {
-				JndiPermission perm = new JndiPermission(prefix, JndiPermission.LIST_BINDINGS);
-				sm.checkPermission(perm);
-			}
-
 			Collection<Binding> bindings = table.values();
 			Collection<Binding> newBindings = new ArrayList<Binding>(bindings.size());
 			for (Binding b : bindings) {
@@ -478,11 +429,6 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 			} else {
 				Name fullName = (Name) prefix.clone();
 				fullName.addAll(name);
-				SecurityManager sm = getSecurityManager();
-				if (sm != null) {
-					JndiPermission perm = new JndiPermission(fullName, JndiPermission.CREATE_SUBCONTEXT);
-					sm.checkPermission(perm);
-				}
 				NamingServer subContext = createNamingServer(fullName, this);
 				subCtx = new NamingContext(null, fullName, getRoot());
 				setBinding(name, subContext, NamingContext.class.getName());
@@ -617,9 +563,4 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 		return table.remove(name.get(0));
 	}
 
-	private SecurityManager getSecurityManager() {
-		if (secMgr == null)
-			secMgr = System.getSecurityManager();
-		return secMgr;
-	}
 }

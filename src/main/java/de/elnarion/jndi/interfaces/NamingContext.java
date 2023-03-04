@@ -190,16 +190,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 
 	public static String getSystemProperty(final String name, final String defaultValue) {
 		String prop;
-		if (System.getSecurityManager() == null) {
 			prop = System.getProperty(name, defaultValue);
-		} else {
-			PrivilegedAction action = new PrivilegedAction() {
-				public Object run() {
-					return System.getProperty(name, defaultValue);
-				}
-			};
-			prop = (String) AccessController.doPrivileged(action);
-		}
 		return prop;
 	}
 
@@ -228,23 +219,14 @@ public class NamingContext implements EventContext, java.io.Serializable {
 			"org.jboss.naming.NamingContext.setHANamingServerForPartition");
 
 	public static void setHANamingServerForPartition(String partitionName, Naming haServer) {
-		SecurityManager security = System.getSecurityManager();
-		if (security != null)
-			security.checkPermission(SET_HA_NAMING_SERVER);
 		haServers.put(partitionName, haServer);
 	}
 
 	public static void removeHANamingServerForPartition(String partitionName) {
-		SecurityManager security = System.getSecurityManager();
-		if (security != null)
-			security.checkPermission(SET_HA_NAMING_SERVER);
 		haServers.remove(partitionName);
 	}
 
 	public static Naming getHANamingServerForPartition(String partitionName) {
-		SecurityManager security = System.getSecurityManager();
-		if (security != null)
-			security.checkPermission(GET_HA_NAMING_SERVER);
 		return (Naming) haServers.get(partitionName);
 	}
 
@@ -502,16 +484,10 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	}
 
 	public static Naming getLocal() {
-		SecurityManager security = System.getSecurityManager();
-		if (security != null)
-			security.checkPermission(GET_LOCAL_SERVER);
 		return localServer;
 	}
 
 	public static void setLocal(Naming server) {
-		SecurityManager security = System.getSecurityManager();
-		if (security != null)
-			security.checkPermission(SET_LOCAL_SERVER);
 		localServer = server;
 	}
 
@@ -1195,22 +1171,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 */
 	private Object createMarshalledValuePair(final Object obj) throws IOException {
 		MarshalledValuePair mvp = null;
-		SecurityManager sm = System.getSecurityManager();
-		if (sm != null) {
-			try {
-				mvp = AccessController.doPrivileged(new PrivilegedExceptionAction<MarshalledValuePair>() {
-					public MarshalledValuePair run() throws Exception {
-						return new MarshalledValuePair(obj);
-					}
-				});
-			} catch (PrivilegedActionException e) {
-				IOException ioe = new IOException();
-				ioe.initCause(e.getException());
-				throw ioe;
-			}
-		} else {
 			mvp = new MarshalledValuePair(obj);
-		}
 		return mvp;
 	}
 
