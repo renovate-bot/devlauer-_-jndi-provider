@@ -43,18 +43,16 @@ public class EventListeners {
 	private static Logger log = LoggerFactory.getLogger(EventListeners.class);
 	private EventContext context;
 	private CopyOnWriteArrayList<EventListenerInfo> listeners;
-	private boolean debug;
 
 	public EventListeners(EventContext context) {
 		super();
 		this.context = context;
-		this.debug = log.isDebugEnabled();
 	}
 
 	public synchronized void addNamingListener(EventContext context, Name target, int scope, NamingListener l)
 			throws NamingException {
 		if (listeners == null)
-			listeners = new CopyOnWriteArrayList<EventListenerInfo>();
+			listeners = new CopyOnWriteArrayList<>();
 		this.context = context;
 		String prefix = context.getNameInNamespace();
 		String fullTargetName = prefix + target.toString();
@@ -72,10 +70,7 @@ public class EventListeners {
 
 	public void fireEvent(Name fullName, Binding oldb, Binding newb, int type, String changeInfo, Set<Integer> scopes) {
 		if (listeners != null) {
-			if (debug) {
-				log.debug("fireEvent, fullName:" + fullName + " type: " + type + ", changeInfo:" + changeInfo
-						+ ", scopes:" + scopes);
-			}
+			log.debug("fireEvent, fullName:{} type: {}, changeInfo:{}, scopes:{}", fullName, type, changeInfo, scopes);
 			String name = fullName.toString();
 			NamingEvent event = new NamingEvent(context, type, newb, oldb, changeInfo);
 			for (EventListenerInfo info : listeners) {
@@ -83,19 +78,25 @@ public class EventListeners {
 					String targetName = info.getFullTargetName();
 					int scope = info.getScope();
 					boolean matches = false;
-					if (scope == EventContext.SUBTREE_SCOPE) {
-						// SUBTREE_SCOPE matches the target or subcontext
-						matches = name.startsWith(targetName);
-					} else if (scope == EventContext.ONELEVEL_SCOPE) {
-						// ONELEVEL_SCOPE matches immediate children of the context
-						matches = fullName.size() == 1;
-					} else
-						matches = name.equals(targetName);
+					matches = checkIfMatches(fullName, name, targetName, scope);
 					if (matches)
 						dispatch(info.getListener(), event);
 				}
 			}
 		}
+	}
+
+	private boolean checkIfMatches(Name fullName, String name, String targetName, int scope) {
+		boolean matches;
+		if (scope == EventContext.SUBTREE_SCOPE) {
+			// SUBTREE_SCOPE matches the target or subcontext
+			matches = name.startsWith(targetName);
+		} else if (scope == EventContext.ONELEVEL_SCOPE) {
+			// ONELEVEL_SCOPE matches immediate children of the context
+			matches = fullName.size() == 1;
+		} else
+			matches = name.equals(targetName);
+		return matches;
 	}
 
 	public void dispatch(NamingListener listener, NamingEvent event) {
@@ -119,6 +120,8 @@ public class EventListeners {
 			if (listener instanceof ObjectChangeListener)
 				((ObjectChangeListener) listener).objectChanged(event);
 			break;
+		default:
+			// do nothing
 		}
 	}
 

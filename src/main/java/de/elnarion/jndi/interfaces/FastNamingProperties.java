@@ -156,7 +156,8 @@ class FastNamingProperties extends Properties {
 		throw new UnsupportedOperationException();
 	}
 
-	public Object clone() {
+	@Override
+	public synchronized Object clone() { // NOSONAR - not implemented
 		throw new UnsupportedOperationException();
 	}
 

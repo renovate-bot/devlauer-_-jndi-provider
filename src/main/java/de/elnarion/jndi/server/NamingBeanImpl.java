@@ -22,9 +22,11 @@
 package de.elnarion.jndi.server;
 
 import java.util.Hashtable;
+import java.util.Map.Entry;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
+import javax.naming.NamingException;
 import javax.naming.RefAddr;
 import javax.naming.Reference;
 import javax.naming.StringRefAddr;
@@ -50,12 +52,12 @@ public class NamingBeanImpl implements NamingBean {
 	 * A flag indicating if theServer will be set as the NamingContext.setLocal
 	 * value
 	 */
-	protected boolean InstallGlobalService = true;
+	protected boolean installGlobalService = true;
 	/**
 	 * A flag indicating if theServer will try to use the NamingContext.setLocal
 	 * value
 	 */
-	protected boolean UseGlobalService = true;
+	protected boolean useGlobalService = true;
 	/**
 	 * The plugin for the manager which dispatches EventContext events to listeners
 	 */
@@ -64,31 +66,25 @@ public class NamingBeanImpl implements NamingBean {
 	/** Whether or not to setup java:comp during startup */
 	private boolean installJavaComp = true;
 
-
-
-	// Constructors --------------------------------------------------
-	public NamingBeanImpl() {
-	}
-
 	// Public --------------------------------------------------------
 	public Naming getNamingInstance() {
 		return theServer;
 	}
 
 	public boolean getInstallGlobalService() {
-		return InstallGlobalService;
+		return installGlobalService;
 	}
 
 	public void setInstallGlobalService(boolean flag) {
-		this.InstallGlobalService = flag;
+		this.installGlobalService = flag;
 	}
 
 	public boolean getUseGlobalService() {
-		return UseGlobalService;
+		return useGlobalService;
 	}
 
 	public void setUseGlobalService(boolean flag) {
-		this.UseGlobalService = flag;
+		this.useGlobalService = flag;
 	}
 
 	public EventMgr getEventMgr() {
@@ -103,9 +99,9 @@ public class NamingBeanImpl implements NamingBean {
 	 * Util method for possible override.
 	 *
 	 * @return new naming instance
-	 * @throws Exception for any error
+	 * @throws NamingException the naming exception
 	 */
-	protected Naming createServer() throws Exception {
+	protected Naming createServer() throws NamingException {
 		return new NamingServer(null, null, eventMgr);
 	}
 
@@ -118,14 +114,15 @@ public class NamingBeanImpl implements NamingBean {
 	}
 
 	/**
-	 * 
-	 * @throws Exception
+	 * Start.
+	 *
+	 * @throws NamingException the naming exception
 	 */
-	public void start() throws Exception {
+	public void start() throws NamingException {
 		// Create the local naming service instance if it does not exist
 		if (theServer == null) {
 			// See if we should try to reuse the current local server
-			if (UseGlobalService == true)
+			if (useGlobalService )
 				theServer = NamingContext.getLocal();
 			// If not, or there is no server create one
 			if (theServer == null)
@@ -135,11 +132,11 @@ public class NamingBeanImpl implements NamingBean {
 				NamingServerWrapper wrapper = new NamingServerWrapper(theServer);
 				theServer = wrapper;
 			}
-			log.debug("Using NamingServer: " + theServer);
-			if (InstallGlobalService == true) {
+			log.debug("Using NamingServer: {}",theServer);
+			if (installGlobalService) {
 				// Set local server reference
 				NamingContext.setLocal(theServer);
-				log.debug("Installed global NamingServer: " + theServer);
+				log.debug("Installed global NamingServer: {}", theServer);
 			}
 		}
 
@@ -152,16 +149,17 @@ public class NamingBeanImpl implements NamingBean {
 		Hashtable<?, ?> env = iniCtx.getEnvironment();
 		log.debug("InitialContext Environment: ");
 		Object providerURL = null;
-		for (Object key : env.keySet()) {
-			Object value = env.get(key);
+		for (Entry<?, ?> entry : env.entrySet())  {
+			Object value = entry.getValue();
+			Object key = entry.getKey();
 			String type = value == null ? "" : value.getClass().getName();
-			log.debug("key=" + key + ", value(" + type + ")=" + value);
+			log.debug("key={}, value({})={}", key  , type  , value);
 			if (key.equals(Context.PROVIDER_URL))
 				providerURL = value;
 		}
 		// Warn if there was a Context.PROVIDER_URL
 		if (providerURL != null)
-			log.warn("Context.PROVIDER_URL in server jndi.properties, url=" + providerURL);
+			log.warn("Context.PROVIDER_URL in server jndi.properties, url={}", providerURL);
 
 		if (installJavaComp) {
 			/*

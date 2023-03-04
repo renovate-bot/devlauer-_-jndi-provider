@@ -77,12 +77,12 @@ public class EventListenerInfo implements NamespaceChangeListener, ObjectChangeL
 
 	public void objectRemoved(NamingEvent evt) {
 		NamespaceChangeListener ncl = (NamespaceChangeListener) listener;
-		ncl.objectAdded(evt);
+		ncl.objectRemoved(evt);
 	}
 
 	public void objectRenamed(NamingEvent evt) {
 		NamespaceChangeListener ncl = (NamespaceChangeListener) listener;
-		ncl.objectAdded(evt);
+		ncl.objectRenamed(evt);
 	}
 
 	public void namingExceptionThrown(NamingExceptionEvent evt) {

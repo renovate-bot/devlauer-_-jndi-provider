@@ -21,7 +21,6 @@
  */
 package de.elnarion.jndi.server;
 
-import java.rmi.RemoteException;
 import java.util.Collection;
 
 import javax.naming.Binding;
@@ -51,44 +50,44 @@ public class NamingServerWrapper implements Naming, NamingEvents {
 			edelegate = (NamingEvents) delegate;
 	}
 
-	public void bind(Name name, Object obj, String className) throws NamingException, RemoteException {
+	public void bind(Name name, Object obj, String className) throws NamingException {
 		delegate.bind(name, obj, className);
 	}
 
-	public Context createSubcontext(Name name) throws NamingException, RemoteException {
+	public Context createSubcontext(Name name) throws NamingException {
 		return delegate.createSubcontext(name);
 	}
 
-	public Collection<NameClassPair> list(Name name) throws NamingException, RemoteException {
+	public Collection<NameClassPair> list(Name name) throws NamingException {
 		return delegate.list(name);
 	}
 
-	public Collection<Binding> listBindings(Name name) throws NamingException, RemoteException {
+	public Collection<Binding> listBindings(Name name) throws NamingException {
 		return delegate.listBindings(name);
 	}
 
-	public Object lookup(Name name) throws NamingException, RemoteException {
+	public Object lookup(Name name) throws NamingException {
 		return delegate.lookup(name);
 	}
 
-	public void rebind(Name name, Object obj, String className) throws NamingException, RemoteException {
+	public void rebind(Name name, Object obj, String className) throws NamingException {
 		delegate.rebind(name, obj, className);
 	}
 
-	public void unbind(Name name) throws NamingException, RemoteException {
+	public void unbind(Name name) throws NamingException {
 		delegate.unbind(name);
 	}
 
 	public void addNamingListener(EventContext context, Name target, int scope, NamingListener l)
-			throws NamingException, RemoteException {
+			throws NamingException {
 		edelegate.addNamingListener(context, target, scope, l);
 	}
 
-	public void removeNamingListener(NamingListener l) throws NamingException, RemoteException {
+	public void removeNamingListener(NamingListener l) throws NamingException {
 		edelegate.removeNamingListener(l);
 	}
 
-	public boolean targetMustExist() throws NamingException, RemoteException {
+	public boolean targetMustExist() throws NamingException {
 		return edelegate.targetMustExist();
 	}
 }

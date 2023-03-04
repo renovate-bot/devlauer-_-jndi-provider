@@ -35,55 +35,37 @@ import de.elnarion.jndi.interfaces.NamingContext;
  * @see <related>
  * @author $Author: starksm $
  */
-public class javaURLContextFactory implements ObjectFactory {
-	// Constants -----------------------------------------------------
+public class javaURLContextFactory implements ObjectFactory { // NOSONAR - needs to start with small caps because of
+																// handling in javax.naming.NamingManager
 
-	// Attributes ----------------------------------------------------
-
-	// Static --------------------------------------------------------
-	private static ThreadLocal<Naming> server = new ThreadLocal<>();
+	private static ThreadLocal<Naming> server = new ThreadLocal<>(); // NOSONAR - not possible because caller is
+																		// javax.naming.NamingManager
 
 	public static void setRoot(Naming srv) {
 		server.set(srv);
 	}
 
 	public static Naming getRoot() {
-		return (Naming) server.get();
+		return server.get();
 	}
 
-	// Constructors --------------------------------------------------
-
-	// Public --------------------------------------------------------
-
-	// ObjectFactory implementation ----------------------------------
 	@SuppressWarnings("unchecked")
-	public Object getObjectInstance(Object obj, Name name, Context nameCtx, Hashtable<?,?> environment) throws Exception {
+	public Object getObjectInstance(Object obj, Name name, Context nameCtx, Hashtable<?, ?> environment)
+			throws Exception {
 		if (obj == null)
-			return new NamingContext((Hashtable<String, Object>) environment, name, (Naming) server.get());
+			return new NamingContext((Hashtable<String, Object>) environment, name, server.get());
 		else if (obj instanceof String) {
 			String url = (String) obj;
-			Context ctx = new NamingContext((Hashtable<String, Object>) environment, name, (Naming) server.get());
+			Context ctx = new NamingContext((Hashtable<String, Object>) environment, name, server.get());
 
 			Name n = ctx.getNameParser(name).parse(url.substring(url.indexOf(":") + 1));
-			if (n.size() >= 3) {
+			if (n.size() >= 3 && n.get(0).equals("") && n.get(1).equals("")) {
 				// Provider URL?
-				if (n.get(0).toString().equals("") && n.get(1).toString().equals("")) {
-					ctx.addToEnvironment(Context.PROVIDER_URL, n.get(2));
-				}
+				ctx.addToEnvironment(Context.PROVIDER_URL, n.get(2));
 			}
 			return ctx;
 		} else {
 			return null;
 		}
 	}
-
-	// Y overrides ---------------------------------------------------
-
-	// Package protected ---------------------------------------------
-
-	// Protected -----------------------------------------------------
-
-	// Private -------------------------------------------------------
-
-	// Inner classes -------------------------------------------------
 }

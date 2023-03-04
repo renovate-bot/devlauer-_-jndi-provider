@@ -22,7 +22,6 @@
 package de.elnarion.jndi.interfaces;
 
 import java.rmi.Remote;
-import java.rmi.RemoteException;
 import java.util.Collection;
 
 import javax.naming.Binding;
@@ -39,18 +38,18 @@ import javax.naming.NamingException;
  * @author Scott.Stark@jboss.org
  */
 public interface Naming extends Remote {
-	// Public --------------------------------------------------------
-	public void bind(Name name, Object obj, String className) throws NamingException, RemoteException;
 
-	public void rebind(Name name, Object obj, String className) throws NamingException, RemoteException;
+	public void bind(Name name, Object obj, String className) throws NamingException;
 
-	public void unbind(Name name) throws NamingException, RemoteException;
+	public void rebind(Name name, Object obj, String className) throws NamingException;
 
-	public Object lookup(Name name) throws NamingException, RemoteException;
+	public void unbind(Name name) throws NamingException;
 
-	public Collection<NameClassPair> list(Name name) throws NamingException, RemoteException;
+	public Object lookup(Name name) throws NamingException;
 
-	public Collection<Binding> listBindings(Name name) throws NamingException, RemoteException;
+	public Collection<NameClassPair> list(Name name) throws NamingException;
 
-	public Context createSubcontext(Name name) throws NamingException, RemoteException;
+	public Collection<Binding> listBindings(Name name) throws NamingException;
+
+	public Context createSubcontext(Name name) throws NamingException;
 }

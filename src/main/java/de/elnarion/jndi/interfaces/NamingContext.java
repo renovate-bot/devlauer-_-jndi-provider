@@ -21,13 +21,8 @@
   */
 package de.elnarion.jndi.interfaces;
 
-import java.io.EOFException;
 import java.io.IOException;
-import java.rmi.ConnectException;
 import java.rmi.MarshalledObject;
-import java.rmi.NoSuchObjectException;
-import java.rmi.RemoteException;
-import java.rmi.UnmarshalException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
@@ -149,11 +144,11 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	private static Naming localServer;
 
 	// Attributes ----------------------------------------------------
-	Naming naming;
-	Hashtable<String, Object> env;
+	transient Naming naming;
+	transient Hashtable<String, Object> env;
 	Name prefix;
 
-	NameParser parser = new NamingParser();
+	transient NameParser parser = new NamingParser();
 
 	// Static --------------------------------------------------------
 
@@ -166,8 +161,8 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 * Called to remove any url scheme atoms and extract the naming service
 	 * information.
 	 *
-	 * @param n the name component to the parsed. After returning n will have all
-	 *          scheme related atoms removed.
+	 * @param n       the name component to the parsed. After returning n will have
+	 *                all scheme related atoms removed.
 	 * @param nameEnv the name env
 	 * @throws InvalidNameException the invalid name exception
 	 */
@@ -209,7 +204,13 @@ public class NamingContext implements EventContext, java.io.Serializable {
 
 	// Constructors --------------------------------------------------
 	@SuppressWarnings("unchecked")
-	public NamingContext(Hashtable<String, Object> e, Name baseName, Naming server) throws NamingException {
+	public NamingContext(Hashtable<String, Object> e, Name baseName, Naming server) throws NamingException { // NOSONAR
+																												// -
+																												// Hashtable
+																												// because
+																												// of
+																												// javax.naming
+																												// use
 		if (baseName == null)
 			this.prefix = parser.parse("");
 		else
@@ -261,18 +262,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 			} else {
 				className = ((Reference) obj).getClassName();
 			}
-			try {
-				naming.rebind(getAbsoluteName(name), obj, className);
-			} catch (RemoteException re) {
-				// Check for JBAS-4574.
-				if (handleStaleNamingStub(re, refEnv)) {
-					// try again with new naming stub
-					naming.rebind(getAbsoluteName(name), obj, className);
-				} else {
-					// Not JBAS-4574. Throw exception and let outer logic handle it.
-					throw re;
-				}
-			}
+			naming.rebind(getAbsoluteName(name), obj, className);
 		} catch (CannotProceedException cpe) {
 			cpe.setEnvironment(refEnv);
 			Context cctx = NamingManager.getContinuationContext(cpe);
@@ -318,18 +308,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 			}
 			name = getAbsoluteName(name);
 
-			try {
-				naming.bind(name, obj, className);
-			} catch (RemoteException re) {
-				// Check for JBAS-4574.
-				if (handleStaleNamingStub(re, refEnv)) {
-					// try again with new naming stub
-					naming.bind(name, obj, className);
-				} else {
-					// Not JBAS-4574. Throw exception and let outer logic handle it.
-					throw re;
-				}
-			}
+			naming.bind(name, obj, className);
 		} catch (CannotProceedException cpe) {
 			cpe.setEnvironment(refEnv);
 			Context cctx = NamingManager.getContinuationContext(cpe);
@@ -359,65 +338,9 @@ public class NamingContext implements EventContext, java.io.Serializable {
 			return new NamingContext(refEnv, prefix, naming);
 
 		try {
-			int maxTries = 1;
-			try {
-				String n = (String) refEnv.get(JNP_MAX_RETRIES);
-				if (n != null)
-					maxTries = Integer.parseInt(n);
-				if (maxTries <= 0)
-					maxTries = 1;
-			} catch (Exception e) {
-				log.debug("Failed to get JNP_MAX_RETRIES, using 1", e);
-			}
 			Name n = getAbsoluteName(name);
 			Object res = null;
-			boolean debug = log.isDebugEnabled();
-			for (int i = 0; i < maxTries; i++) {
-				try {
-					try {
-						res = naming.lookup(n);
-					} catch (RemoteException re) {
-						// Check for JBAS-4574.
-						if (handleStaleNamingStub(re, refEnv)) {
-							// try again with new naming stub
-							res = naming.lookup(n);
-						}
-						// Check for JBPAPP-6447.
-						else if (handleDyingServer(re, refEnv)) {
-							// try again with new naming stub
-							res = naming.lookup(n);
-						} else {
-							// Throw exception and let outer logic handle it.
-							throw re;
-						}
-					} catch (ServiceUnavailableException re) {
-						// Check for JBPAPP-8152/JBPAPP-8305
-						if (handleServerStartupShutdown(re, refEnv)) {
-							// try again with new naming stub
-							res = naming.lookup(n);
-						} else {
-							// Throw exception and let outer logic handle it.
-							throw re;
-						}
-					}
-					// If we got here, we succeeded, so break the loop
-					break;
-				} catch (ConnectException ce) {
-					int retries = maxTries - i - 1;
-					if (debug)
-						log.debug("Connect failed, retry count: " + retries, ce);
-					// We may overload server so sleep and retry
-					if (retries > 0) {
-						try {
-							Thread.sleep(1);
-						} catch (InterruptedException ignored) {
-						}
-						continue;
-					}
-					// Throw the exception to flush the bad server
-					throw ce;
-				}
-			}
+			res = lookupValueWithExceptionHandling(refEnv, n);
 			if (res instanceof MarshalledValuePair) {
 				MarshalledValuePair mvp = (MarshalledValuePair) res;
 				Object storedObj = mvp.get();
@@ -429,7 +352,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 				// Add env
 				Enumeration<String> keys = refEnv.keys();
 				while (keys.hasMoreElements()) {
-					String key = (String) keys.nextElement();
+					String key = keys.nextElement();
 					((Context) res).addToEnvironment(key, refEnv.get(key));
 				}
 				return res;
@@ -448,7 +371,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 					instanceID = context;
 				}
 
-				if ((context instanceof Context) == false) {
+				if (!(context instanceof Context)) {
 					throw new NotContextException(instanceID + " is not a Context");
 				}
 				Context ncontext = (Context) context;
@@ -481,6 +404,22 @@ public class NamingContext implements EventContext, java.io.Serializable {
 		}
 	}
 
+	private Object lookupValueWithExceptionHandling(Hashtable<String, Object> refEnv, Name n )
+			throws NamingException {
+		try {
+			return naming.lookup(n);
+		} catch (ServiceUnavailableException re) {
+			// Check for JBPAPP-8152/JBPAPP-8305
+			if (handleServerStartupShutdown(re, refEnv)) {
+				// try again with new naming stub
+				return naming.lookup(n);
+			} else {
+				// Throw exception and let outer logic handle it.
+				throw re;
+			}
+		}
+	}
+
 	public void unbind(String name) throws NamingException {
 		unbind(getNameParser(name).parse(name));
 	}
@@ -493,28 +432,11 @@ public class NamingContext implements EventContext, java.io.Serializable {
 			name = parsedName;
 
 		try {
-			try {
-				naming.unbind(getAbsoluteName(name));
-			} catch (RemoteException re) {
-				// Check for JBAS-4574.
-				if (handleStaleNamingStub(re, refEnv)) {
-					// try again with new naming stub
-					naming.unbind(getAbsoluteName(name));
-				} else {
-					// Not JBAS-4574. Throw exception and let outer logic handle it.
-					throw re;
-				}
-			}
+			naming.unbind(getAbsoluteName(name));
 		} catch (CannotProceedException cpe) {
 			cpe.setEnvironment(refEnv);
 			Context cctx = NamingManager.getContinuationContext(cpe);
 			cctx.unbind(cpe.getRemainingName());
-		} catch (IOException e) {
-			naming = null;
-			removeServer(refEnv);
-			NamingException ex = new CommunicationException();
-			ex.setRootCause(e);
-			throw ex;
 		}
 	}
 
@@ -540,29 +462,12 @@ public class NamingContext implements EventContext, java.io.Serializable {
 
 		try {
 			Collection<NameClassPair> c = null;
-			try {
-				c = naming.list(getAbsoluteName(name));
-			} catch (RemoteException re) {
-				// Check for JBAS-4574.
-				if (handleStaleNamingStub(re, refEnv)) {
-					// try again with new naming stub
-					c = naming.list(getAbsoluteName(name));
-				} else {
-					// Not JBAS-4574. Throw exception and let outer logic handle it.
-					throw re;
-				}
-			} 
+			c = naming.list(getAbsoluteName(name));
 			return new NameClassPairEnumerationImpl(c);
 		} catch (CannotProceedException cpe) {
 			cpe.setEnvironment(refEnv);
 			Context cctx = NamingManager.getContinuationContext(cpe);
 			return cctx.list(cpe.getRemainingName());
-		} catch (IOException e) {
-			naming = null;
-			removeServer(refEnv);
-			NamingException ex = new CommunicationException();
-			ex.setRootCause(e);
-			throw ex;
 		}
 	}
 
@@ -580,20 +485,9 @@ public class NamingContext implements EventContext, java.io.Serializable {
 		try {
 			// Get list
 			Collection<?> bindings = null;
-			try {
-				// Get list
-				bindings = naming.listBindings(getAbsoluteName(name));
-			} catch (RemoteException re) {
-				// Check for JBAS-4574.
-				if (handleStaleNamingStub(re, refEnv)) {
-					// try again with new naming stub
-					bindings = naming.listBindings(getAbsoluteName(name));
-				} else {
-					// Not JBAS-4574. Throw exception and let outer logic handle it.
-					throw re;
-				}
-			}
-			Collection<Binding> realBindings = new ArrayList<Binding>(bindings.size());
+			// Get list
+			bindings = naming.listBindings(getAbsoluteName(name));
+			Collection<Binding> realBindings = new ArrayList<>(bindings.size());
 
 			// Convert marshalled objects
 			Iterator<?> i = bindings.iterator();
@@ -601,21 +495,9 @@ public class NamingContext implements EventContext, java.io.Serializable {
 				Binding binding = (Binding) i.next();
 				Object obj = binding.getObject();
 				if (obj instanceof MarshalledValuePair) {
-					try {
-						obj = ((MarshalledValuePair) obj).get();
-					} catch (ClassNotFoundException e) {
-						NamingException ex = new CommunicationException();
-						ex.setRootCause(e);
-						throw ex;
-					}
+					obj = extracted(obj);
 				} else if (obj instanceof MarshalledObject) {
-					try {
-						obj = ((MarshalledObject<?>) obj).get();
-					} catch (ClassNotFoundException e) {
-						NamingException ex = new CommunicationException();
-						ex.setRootCause(e);
-						throw ex;
-					}
+					obj = ((MarshalledObject<?>) obj).get();
 				}
 				realBindings.add(new Binding(binding.getName(), binding.getClassName(), obj));
 			}
@@ -626,13 +508,24 @@ public class NamingContext implements EventContext, java.io.Serializable {
 			cpe.setEnvironment(refEnv);
 			Context cctx = NamingManager.getContinuationContext(cpe);
 			return cctx.listBindings(cpe.getRemainingName());
-		} catch (IOException e) {
+		} catch (IOException|ClassNotFoundException e) {
 			naming = null;
 			removeServer(refEnv);
 			NamingException ex = new CommunicationException();
 			ex.setRootCause(e);
 			throw ex;
+		} 
+	}
+
+	private Object extracted(Object obj) throws IOException, NamingException {
+		try {
+			obj = ((MarshalledValuePair) obj).get();
+		} catch (ClassNotFoundException e) {
+			NamingException ex = new CommunicationException();
+			ex.setRootCause(e);
+			throw ex;
 		}
+		return obj;
 	}
 
 	public String composeName(String name, String prefix) throws NamingException {
@@ -670,28 +563,11 @@ public class NamingContext implements EventContext, java.io.Serializable {
 
 		try {
 			name = getAbsoluteName(name);
-			try {
-				return naming.createSubcontext(name);
-			} catch (RemoteException re) {
-				// Check for JBAS-4574.
-				if (handleStaleNamingStub(re, refEnv)) {
-					// try again with new naming stub
-					return naming.createSubcontext(name);
-				} else {
-					// Not JBAS-4574. Throw exception and let outer logic handle it.
-					throw re;
-				}
-			}
+			return naming.createSubcontext(name);
 		} catch (CannotProceedException cpe) {
 			cpe.setEnvironment(refEnv);
 			Context cctx = NamingManager.getContinuationContext(cpe);
 			return cctx.createSubcontext(cpe.getRemainingName());
-		} catch (IOException e) {
-			naming = null;
-			removeServer(refEnv);
-			NamingException ex = new CommunicationException();
-			ex.setRootCause(e);
-			throw ex;
 		}
 	}
 
@@ -753,21 +629,9 @@ public class NamingContext implements EventContext, java.io.Serializable {
 		Object link = null;
 		try {
 			Name n = getAbsoluteName(name);
-			try {
-				link = naming.lookup(n);
-			} catch (RemoteException re) {
-				// Check for JBAS-4574.
-				if (handleStaleNamingStub(re, refEnv)) {
-					// try again with new naming stub
-					link = naming.lookup(n);
-				} else {
-					// Not JBAS-4574. Throw exception and let outer logic handle it.
-					throw re;
-				}
-			}
+			link = naming.lookup(n);
 			if (!(link instanceof LinkRef) && link instanceof Reference)
 				link = getObjectInstance(link, name, null);
-			;
 		} catch (IOException e) {
 			naming = null;
 			removeServer(refEnv);
@@ -785,18 +649,13 @@ public class NamingContext implements EventContext, java.io.Serializable {
 
 	// Begin EventContext methods
 	public void addNamingListener(Name target, int scope, NamingListener l) throws NamingException {
-		if ((naming instanceof NamingEvents) == false) {
+		if (!(naming instanceof NamingEvents)) {
 			Class<?> cls = naming.getClass();
 			String cs = cls.getName() + ", CS:" + cls.getProtectionDomain().getCodeSource().toString();
 			throw new UnsupportedOperationException("Naming implementation does not support NamingExt, : " + cs);
 		}
 		NamingEvents next = (NamingEvents) naming;
-		try {
-			next.addNamingListener(this, target, scope, l);
-		} catch (RemoteException e) {
-			CommunicationException ce = new CommunicationException("addNamingListener failed");
-			ce.initCause(e);
-		}
+		next.addNamingListener(this, target, scope, l);
 	}
 
 	public void addNamingListener(String target, int scope, NamingListener l) throws NamingException {
@@ -805,30 +664,20 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	}
 
 	public void removeNamingListener(NamingListener l) throws NamingException {
-		if ((naming instanceof NamingEvents) == false) {
+		if (!(naming instanceof NamingEvents)) {
 			throw new UnsupportedOperationException("Naming implementation does not support NamingExt");
 		}
 		NamingEvents next = (NamingEvents) naming;
-		try {
-			next.removeNamingListener(l);
-		} catch (RemoteException e) {
-			CommunicationException ce = new CommunicationException("removeNamingListener failed");
-			ce.initCause(e);
-		}
+		next.removeNamingListener(l);
 	}
 
 	public boolean targetMustExist() throws NamingException {
-		if ((naming instanceof NamingEvents) == false) {
+		if (!(naming instanceof NamingEvents)) {
 			throw new UnsupportedOperationException("Naming implementation does not support NamingExt");
 		}
 		NamingEvents next = (NamingEvents) naming;
 		boolean targetMustExist = true;
-		try {
-			targetMustExist = next.targetMustExist();
-		} catch (RemoteException e) {
-			CommunicationException ce = new CommunicationException("removeNamingListener failed");
-			ce.initCause(e);
-		}
+		targetMustExist = next.targetMustExist();
 		return targetMustExist;
 	}
 	// End EventContext methods
@@ -956,7 +805,8 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 * @return the fully resolved object
 	 * @throws NamingException
 	 */
-	private Object getObjectInstanceWrapFailure(Object obj, Name name, Hashtable<String, Object> env) throws NamingException {
+	private Object getObjectInstanceWrapFailure(Object obj, Name name, Hashtable<String, Object> env)
+			throws NamingException {
 		try {
 			return getObjectInstance(obj, name, env);
 		} catch (NamingException e) {
@@ -985,7 +835,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 				}
 
 				if (Boolean.valueOf(unorderedProviderList) == Boolean.TRUE) {
-					while (naming == null && tokenizer.hasMoreElements()) {
+					while (tokenizer.hasMoreElements()) {
 						String url = tokenizer.nextToken();
 						// Parse the url into a host:port form, stripping any protocol
 						Name urlAsName = getNameParser("").parse(url);
@@ -993,14 +843,11 @@ public class NamingContext implements EventContext, java.io.Serializable {
 					}
 					tokenizer = new StringTokenizer(urls, ",");
 				}
-
-				if (naming == null) {
-					while (naming == null && tokenizer.hasMoreElements()) {
-						String url = tokenizer.nextToken();
-						// Parse the url into a host:port form, stripping any protocol
-						Name urlAsName = getNameParser("").parse(url);
-						parseNameForScheme(urlAsName, null);
-					}
+				while (tokenizer.hasMoreElements()) {
+					String url = tokenizer.nextToken();
+					// Parse the url into a host:port form, stripping any protocol
+					Name urlAsName = getNameParser("").parse(url);
+					parseNameForScheme(urlAsName, null);
 				}
 			} else {
 				// Use server in same JVM
@@ -1012,7 +859,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	private Name getAbsoluteName(Name n) throws NamingException {
 		if (n.isEmpty())
 			return composeName(n, prefix);
-		else if (n.get(0).toString().equals("")) // Absolute name
+		else if (n.get(0).equals("")) // Absolute name
 			return n.getSuffix(1);
 		else // Add prefix
 			return composeName(n, prefix);
@@ -1023,79 +870,6 @@ public class NamingContext implements EventContext, java.io.Serializable {
 		env.remove(JNP_PARSED_NAME);
 		parseNameForScheme(n, nameEnv);
 		return nameEnv;
-	}
-
-	/**
-	 * JBAS-4574. Check if the given exception is because the server has been
-	 * restarted while the cached naming stub hasn't been dgc-ed yet. If yes, we
-	 * will flush out the naming stub from our cache and acquire a new stub. BW.
-	 * 
-	 * @param e      the exception that may be due to a stale stub
-	 * @param refEnv the naming environment associated with the failed call
-	 * 
-	 * @return <code>true</code> if <code>e</code> indicates a stale naming stub and
-	 *         we were able to succesfully flush the cache and acquire a new stub;
-	 *         <code>false</code> otherwise.
-	 */
-	private boolean handleStaleNamingStub(Exception e, Hashtable<String, Object> refEnv) {
-		if (e instanceof NoSuchObjectException || e.getCause() instanceof NoSuchObjectException) {
-			try {
-				if (log.isDebugEnabled()) {
-					log.debug("Call failed with NoSuchObjectException, " + "flushing server cache and retrying", e);
-				}
-				naming = null;
-				removeServer(refEnv);
-
-				checkRef(refEnv);
-
-				return true;
-			} catch (Exception e1) {
-				// Just log and return false; let caller continue processing
-				// the original exception passed in to this method
-				log.error("Caught exception flushing server cache and " + "re-establish naming after exception "
-						+ e.getLocalizedMessage(), e1);
-			}
-		}
-		return false;
-	}
-
-	/**
-	 * JBPAPP-6447. Check if the given exception is because the server has died in
-	 * the middle of an operation. If yes, we will flush out the naming stub from
-	 * our cache and acquire a new stub.
-	 *
-	 * Triggers on java.rmi.UnmarshalException wrapping a EOFException
-	 *
-	 * This must ONLY be used for idempotent operations where we don't care if the
-	 * server may have already processed the request!
-	 * 
-	 * @param e      the exception that may be due to a dying server
-	 * @param refEnv the naming environment associated with the failed call
-	 * 
-	 * @return <code>true</code> if <code>e</code> indicates a dying server and we
-	 *         were able to succesfully flush the cache and acquire a new stub;
-	 *         <code>false</code> otherwise.
-	 */
-	private boolean handleDyingServer(Exception e, Hashtable<String, Object> refEnv) {
-		if (e instanceof UnmarshalException && e.getCause() != null && (e.getCause() instanceof EOFException)) {
-			try {
-				if (log.isDebugEnabled()) {
-					log.debug("Call failed with UnmarshalException, " + "flushing server cache and retrying", e);
-				}
-				naming = null;
-				removeServer(refEnv);
-
-				checkRef(refEnv);
-
-				return true;
-			} catch (Exception e1) {
-				// Just log and return false; let caller continue processing
-				// the original exception passed in to this method
-				log.error("Caught exception flushing server cache and " + "re-establish naming after exception "
-						+ e.getLocalizedMessage(), e1);
-			}
-		}
-		return false;
 	}
 
 	/**

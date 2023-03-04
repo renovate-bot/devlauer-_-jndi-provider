@@ -37,8 +37,8 @@ public class MarshalledValuePair implements Serializable {
 	private static final long serialVersionUID = -3403843515711139134L;
 
 	private static boolean enableCallByReference = true;
-	public MarshalledObject<?> marshalledValue;
-	public transient Object value;
+	private MarshalledObject<?> marshalledValue;
+	private transient Object value;
 
 	/**
 	 * Get the lookp call by reference flag.

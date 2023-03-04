@@ -36,10 +36,11 @@ import javax.naming.NamingException;
  *
  * @author Scott.Stark@jboss.org
  */
-public class NamingContextFactory extends de.elnarion.jndi.interfaces.NamingContextFactory {
+public class VmNamingContextFactory extends de.elnarion.jndi.interfaces.NamingContextFactory {
 	public static final ThreadLocal<Hashtable<?,?>> lastInitialContextEnv = new ThreadLocal<>();
 
 	// InitialContextFactory implementation --------------------------
+	@Override
 	public Context getInitialContext(Hashtable<?,?> env) throws NamingException {
 		lastInitialContextEnv.set(env);
 		return super.getInitialContext(env);

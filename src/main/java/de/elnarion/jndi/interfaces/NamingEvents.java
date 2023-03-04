@@ -21,8 +21,6 @@
  */
 package de.elnarion.jndi.interfaces;
 
-import java.rmi.RemoteException;
-
 import javax.naming.Name;
 import javax.naming.NamingException;
 import javax.naming.event.EventContext;
@@ -50,7 +48,7 @@ public interface NamingEvents extends Naming {
 	 * @see #removeNamingListener
 	 */
 	void addNamingListener(EventContext context, Name target, int scope, NamingListener l)
-			throws NamingException, RemoteException;
+			throws NamingException;
 
 	/**
 	 * Removes a listener from receiving naming events
@@ -60,7 +58,7 @@ public interface NamingEvents extends Naming {
 	 *                            listener.
 	 * @see #addNamingListener
 	 */
-	void removeNamingListener(NamingListener l) throws NamingException, RemoteException;
+	void removeNamingListener(NamingListener l) throws NamingException;
 
 	/**
 	 * Determines whether a listener can register interest in a target that does not
@@ -70,5 +68,5 @@ public interface NamingEvents extends Naming {
 	 * @exception NamingException If the context's behavior in this regard cannot be
 	 *                            determined.
 	 */
-	boolean targetMustExist() throws NamingException, RemoteException;
+	boolean targetMustExist() throws NamingException;
 }

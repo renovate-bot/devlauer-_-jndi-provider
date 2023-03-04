@@ -67,7 +67,7 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 
 	// Attributes ----------------------------------------------------
 	/** */
-	protected Map<String, Binding> table = createTable();
+	protected transient Map<String, Binding> table = createTable();
 	protected Name prefix;
 	protected NamingParser parser = new NamingParser();
 	protected NamingServer parent;
@@ -106,7 +106,7 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 		if (listeners == null)
 			listeners = new EventListeners(context);
 		if (debug)
-			log.debug("addNamingListener, target: " + target + ", scope: " + scope);
+			log.debug("addNamingListener, target: {}, scope: {}", target, scope);
 		listeners.addNamingListener(context, target, scope, l);
 	}
 
@@ -133,8 +133,6 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 			throw new InvalidNameException("An empty name cannot be passed to bind");
 		} else if (name.size() > 1) {
 			// Recurse to find correct context
-//         System.out.println("bind#"+name+"#");
-
 			Object ctx = getObject(name);
 			if (ctx != null) {
 				if (ctx instanceof NamingServer) {
@@ -162,7 +160,7 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 				throw new InvalidNameException("An empty name cannot be passed to bind");
 			} else {
 				if (debug)
-					log.debug("bind " + name + "=" + obj + ", " + className);
+					log.debug("bind {}={}, {}", name, obj, className);
 				try {
 					getBinding(name);
 					// Already bound
@@ -186,43 +184,50 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 			throw new InvalidNameException("An empty name cannot be passed to rebind");
 		} else if (name.size() > 1) {
 			// Recurse to find correct context
-//         System.out.println("rebind#"+name+"#");
+			rebindName(name, obj, className);
+		} else {
+			// Bind object
+			bindToContext(name, obj, className);
+		}
+	}
 
-			Object ctx = getObject(name);
-			if (ctx instanceof NamingServer) {
-				((NamingServer) ctx).rebind(name.getSuffix(1), obj, className);
-			} else if (ctx instanceof Reference) {
-				// Federation
-				if (((Reference) ctx).get("nns") != null) {
-					CannotProceedException cpe = new CannotProceedException();
-					cpe.setResolvedObj(ctx);
-					cpe.setRemainingName(name.getSuffix(1));
-					throw cpe;
-				} else {
-					throw new NotContextException();
-				}
+	private void bindToContext(Name name, Object obj, String className) throws InvalidNameException {
+		if (name.get(0).equals("")) {
+			throw new InvalidNameException("An empty name cannot be passed to rebind");
+		} else {
+			Name fullName = (Name) prefix.clone();
+			String comp = name.get(0);
+			fullName.add(comp);
+
+			Binding oldb = table.get(comp);
+			Binding newb = setBinding(name, obj, className);
+			// Notify event listeners
+			if (listeners != null) {
+				int type = NamingEvent.OBJECT_CHANGED;
+				if (oldb == null)
+					type = NamingEvent.OBJECT_ADDED;
+				this.fireEvent(fullName, oldb, newb, type, "rebind");
+			}
+		}
+	}
+
+	private void rebindName(Name name, Object obj, String className)
+			throws NamingException{
+		Object ctx = getObject(name);
+		if (ctx instanceof NamingServer) {
+			((NamingServer) ctx).rebind(name.getSuffix(1), obj, className);
+		} else if (ctx instanceof Reference) {
+			// Federation
+			if (((Reference) ctx).get("nns") != null) {
+				CannotProceedException cpe = new CannotProceedException();
+				cpe.setResolvedObj(ctx);
+				cpe.setRemainingName(name.getSuffix(1));
+				throw cpe;
 			} else {
 				throw new NotContextException();
 			}
 		} else {
-			// Bind object
-			if (name.get(0).equals("")) {
-				throw new InvalidNameException("An empty name cannot be passed to rebind");
-			} else {
-				Name fullName = (Name) prefix.clone();
-				String comp = name.get(0);
-				fullName.add(comp);
-
-				Binding oldb = table.get(comp);
-				Binding newb = setBinding(name, obj, className);
-				// Notify event listeners
-				if (listeners != null) {
-					int type = NamingEvent.OBJECT_CHANGED;
-					if (oldb == null)
-						type = NamingEvent.OBJECT_ADDED;
-					this.fireEvent(fullName, oldb, newb, type, "rebind");
-				}
-			}
+			throw new NotContextException();
 		}
 	}
 
@@ -232,8 +237,6 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 			throw new InvalidNameException();
 		} else if (name.size() > 1) {
 			// Recurse to find correct context
-//         System.out.println("unbind#"+name+"#");
-
 			Object ctx = getObject(name);
 			if (ctx instanceof NamingServer) {
 				((NamingServer) ctx).unbind(name.getSuffix(1));
@@ -255,24 +258,19 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 			if (name.get(0).equals("")) {
 				throw new InvalidNameException();
 			} else {
-//            System.out.println("unbind "+name+"="+getBinding(name));
-				if (getBinding(name) != null) {
-					Name fullName = (Name) prefix.clone();
-					fullName.addAll(name);
+				getBinding(name);
+				Name fullName = (Name) prefix.clone();
+				fullName.addAll(name);
 
-					Binding newb = null;
-					Binding oldb = removeBinding(name);
-					// Notify event listeners
-					int type = NamingEvent.OBJECT_REMOVED;
-					this.fireEvent(fullName, oldb, newb, type, "unbind");
-				} else {
-					throw new NameNotFoundException();
-				}
+				Binding newb = null;
+				Binding oldb = removeBinding(name);
+				// Notify event listeners
+				int type = NamingEvent.OBJECT_REMOVED;
+				this.fireEvent(fullName, oldb, newb, type, "unbind");
 			}
 		}
 	}
 
-//   public synchronized Object lookup(Name name)
 	public Object lookup(Name name) throws NamingException {
 		Object result;
 		if (name.isEmpty()) {
@@ -281,30 +279,12 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 			result = new NamingContext(null, (Name) (prefix.clone()), getRoot());
 		} else if (name.size() > 1) {
 			// Recurse to find correct context
-//         System.out.println("lookup#"+name+"#");
-
-			Object ctx = getObject(name);
-			if (ctx instanceof NamingServer) {
-				result = ((NamingServer) ctx).lookup(name.getSuffix(1));
-			} else if (ctx instanceof Reference) {
-				// Federation
-				if (((Reference) ctx).get("nns") != null) {
-					CannotProceedException cpe = new CannotProceedException();
-					cpe.setResolvedObj(ctx);
-					cpe.setRemainingName(name.getSuffix(1));
-					throw cpe;
-				}
-
-				result = new ResolveResult(ctx, name.getSuffix(1));
-			} else {
-				throw new NotContextException();
-			}
+			result = lookupInContext(name);
 		} else {
 			// Get object to return
 			if (name.get(0).equals("")) {
 				result = new NamingContext(null, (Name) (prefix.clone()), getRoot());
 			} else {
-//            System.out.println("lookup "+name);
 				Name fullName = (Name) (prefix.clone());
 				fullName.addAll(name);
 
@@ -320,9 +300,27 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 		return result;
 	}
 
+	private Object lookupInContext(Name name) throws NamingException {
+		Object ctx = getObject(name);
+		if (ctx instanceof NamingServer) {
+			return ((NamingServer) ctx).lookup(name.getSuffix(1));
+		} else if (ctx instanceof Reference) {
+			// Federation
+			if (((Reference) ctx).get("nns") != null) {
+				CannotProceedException cpe = new CannotProceedException();
+				cpe.setResolvedObj(ctx);
+				cpe.setRemainingName(name.getSuffix(1));
+				throw cpe;
+			}
+			return new ResolveResult(ctx, name.getSuffix(1));
+		} else {
+			throw new NotContextException();
+		}
+	}
+
 	public Collection<NameClassPair> list(Name name) throws NamingException {
 		if (name.isEmpty()) {
-			ArrayList<NameClassPair> list = new ArrayList<NameClassPair>();
+			ArrayList<NameClassPair> list = new ArrayList<>();
 			for (Binding b : table.values()) {
 				NameClassPair ncp = new NameClassPair(b.getName(), b.getClassName(), true);
 				list.add(ncp);
@@ -350,19 +348,7 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 
 	public Collection<Binding> listBindings(Name name) throws NamingException {
 		if (name.isEmpty()) {
-			Collection<Binding> bindings = table.values();
-			Collection<Binding> newBindings = new ArrayList<Binding>(bindings.size());
-			for (Binding b : bindings) {
-				if (b.getObject() instanceof NamingServer) {
-					Name n = (Name) prefix.clone();
-					n.add(b.getName());
-					newBindings.add(new Binding(b.getName(), b.getClassName(), new NamingContext(null, n, getRoot())));
-				} else {
-					newBindings.add(b);
-				}
-			}
-
-			return newBindings;
+			return listCurrentBindings();
 		} else {
 			Object ctx = getObject(name);
 			if (ctx instanceof NamingServer) {
@@ -383,6 +369,22 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 		}
 	}
 
+	private Collection<Binding> listCurrentBindings() throws NamingException {
+		Collection<Binding> bindings = table.values();
+		Collection<Binding> newBindings = new ArrayList<>(bindings.size());
+		for (Binding b : bindings) {
+			if (b.getObject() instanceof NamingServer) {
+				Name n = (Name) prefix.clone();
+				n.add(b.getName());
+				newBindings.add(new Binding(b.getName(), b.getClassName(), new NamingContext(null, n, getRoot())));
+			} else {
+				newBindings.add(b);
+			}
+		}
+
+		return newBindings;
+	}
+
 	public Context createSubcontext(Name name) throws NamingException {
 		if (name.size() == 0)
 			throw new InvalidNameException("Cannot pass an empty name to createSubcontext");
@@ -390,35 +392,7 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 		NamingException ex = null;
 		Context subCtx = null;
 		if (name.size() > 1) {
-			Object ctx = getObject(name);
-			if (ctx != null) {
-				Name subCtxName = name.getSuffix(1);
-				if (ctx instanceof NamingServer) {
-					subCtx = ((NamingServer) ctx).createSubcontext(subCtxName);
-				} else if (ctx instanceof Reference) {
-					// Federation
-					if (((Reference) ctx).get("nns") != null) {
-						CannotProceedException cpe = new CannotProceedException();
-						cpe.setResolvedObj(ctx);
-						cpe.setRemainingName(subCtxName);
-						throw cpe;
-					} else {
-						ex = new NotContextException();
-						ex.setResolvedName(name.getPrefix(0));
-						ex.setRemainingName(subCtxName);
-						throw ex;
-					}
-				} else {
-					ex = new NotContextException();
-					ex.setResolvedName(name.getPrefix(0));
-					ex.setRemainingName(subCtxName);
-					throw ex;
-				}
-			} else {
-				ex = new NameNotFoundException();
-				ex.setRemainingName(name);
-				throw ex;
-			}
+			subCtx = createFurtherSubcontexts(name);
 		} else {
 			Object binding = table.get(name.get(0));
 			if (binding != null) {
@@ -444,6 +418,39 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 		return subCtx;
 	}
 
+	private Context createFurtherSubcontexts(Name name) throws NamingException {
+		NamingException ex;
+		Object ctx = getObject(name);
+		if (ctx != null) {
+			Name subCtxName = name.getSuffix(1);
+			if (ctx instanceof NamingServer) {
+				return ((NamingServer) ctx).createSubcontext(subCtxName);
+			} else if (ctx instanceof Reference) {
+				// Federation
+				if (((Reference) ctx).get("nns") != null) {
+					CannotProceedException cpe = new CannotProceedException();
+					cpe.setResolvedObj(ctx);
+					cpe.setRemainingName(subCtxName);
+					throw cpe;
+				} else {
+					ex = new NotContextException();
+					ex.setResolvedName(name.getPrefix(0));
+					ex.setRemainingName(subCtxName);
+					throw ex;
+				}
+			} else {
+				ex = new NotContextException();
+				ex.setResolvedName(name.getPrefix(0));
+				ex.setRemainingName(subCtxName);
+				throw ex;
+			}
+		} else {
+			ex = new NameNotFoundException();
+			ex.setRemainingName(name);
+			throw ex;
+		}
+	}
+
 	public Naming getRoot() {
 		if (parent == null)
 			return this;
@@ -458,7 +465,7 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 	// Protected -----------------------------------------------------
 
 	protected Map<String, Binding> createTable() {
-		return new ConcurrentHashMap<String, Binding>();
+		return new ConcurrentHashMap<>();
 	}
 
 	/**
@@ -473,8 +480,7 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 		return new NamingServer(prefix, parent, eventMgr);
 	}
 
-	protected void fireEvent(Name fullName, Binding oldb, Binding newb, int type, String changeInfo)
-			throws NamingException {
+	protected void fireEvent(Name fullName, Binding oldb, Binding newb, int type, String changeInfo) {
 		if (eventMgr == null) {
 			if (debug)
 				log.debug("Skipping event dispatch because there is no EventMgr");
@@ -483,17 +489,17 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 
 		if (listeners != null) {
 			if (debug)
-				log.debug("fireEvent, type: " + type + ", fullName: " + fullName);
-			HashSet<Integer> scopes = new HashSet<Integer>();
+				log.debug("fireEvent, type: {}, fullName: {}", type, fullName);
+			HashSet<Integer> scopes = new HashSet<>();
 			scopes.add(EventContext.OBJECT_SCOPE);
 			scopes.add(EventContext.ONELEVEL_SCOPE);
 			scopes.add(EventContext.SUBTREE_SCOPE);
 			eventMgr.fireEvent(fullName, oldb, newb, type, changeInfo, listeners, scopes);
 		} else if (debug) {
-			log.debug("fireEvent, type: " + type + ", fullName: " + fullName);
+			log.debug("fireEvent, type: {}, fullName: {}", type, fullName);
 		}
 		// Traverse to parent for SUBTREE_SCOPE
-		HashSet<Integer> scopes = new HashSet<Integer>();
+		HashSet<Integer> scopes = new HashSet<>();
 		scopes.add(EventContext.SUBTREE_SCOPE);
 		NamingServer nsparent = parent;
 		while (nsparent != null) {
@@ -511,14 +517,15 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 		Binding b = new Binding(n, className, obj, true);
 		table.put(n, b);
 		if (debug) {
-			StringBuffer tmp = new StringBuffer(super.toString());
+			StringBuilder tmp = new StringBuilder(super.toString());
 			tmp.append(", setBinding: name=");
 			tmp.append(name);
 			tmp.append(", obj=");
 			tmp.append(obj);
 			tmp.append(", className=");
 			tmp.append(className);
-			log.debug(tmp.toString());
+			if (log.isDebugEnabled())
+				log.debug(tmp.toString());
 		}
 		return b;
 	}
@@ -527,7 +534,7 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 		Binding b = table.get(key);
 		if (b == null) {
 			if (log.isDebugEnabled()) {
-				StringBuffer tmp = new StringBuffer(super.toString());
+				StringBuilder tmp = new StringBuilder(super.toString());
 				tmp.append(", No binding for: ");
 				tmp.append(key);
 				tmp.append(" in context ");

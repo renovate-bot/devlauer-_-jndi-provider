@@ -30,12 +30,12 @@ import java.util.List;
  * @author <a href="mailto:bill@jboss.org">Bill Burke</a>
  */
 public class ThreadLocalStack<T> {
-	private ThreadLocal<ArrayList<T>> stack = new ThreadLocal<ArrayList<T>>();
+	private ThreadLocal<ArrayList<T>> stack = new ThreadLocal<>(); //NOSONAR - ignore
 
 	public void push(T obj) {
 		ArrayList<T> list = stack.get();
 		if (list == null) {
-			list = new ArrayList<T>(1);
+			list = new ArrayList<>(1);
 			stack.set(list);
 		}
 		list.add(obj);
@@ -47,15 +47,15 @@ public class ThreadLocalStack<T> {
 			return null;
 		}
 		T rtn = list.remove(list.size() - 1);
-		if (list.size() == 0) {
-			stack.set(null);
+		if (list.isEmpty()) {
+			stack.set(null); //NOSONAR - ignore
 			list.clear();
 		}
 		return rtn;
 	}
 
 	public T get() {
-		ArrayList<T> list = (ArrayList<T>) stack.get();
+		ArrayList<T> list =  stack.get();
 		if (list == null) {
 			return null;
 		}

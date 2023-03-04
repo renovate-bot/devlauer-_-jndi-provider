@@ -38,9 +38,6 @@ public class ExecutorEventMgr implements EventMgr {
 	
 	private Executor executor = Executors.newSingleThreadExecutor();
 
-	public ExecutorEventMgr() {
-	}
-
 	public Executor getExecutor() {
 		return executor;
 	}

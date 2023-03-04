@@ -25,6 +25,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import javax.naming.Context;
 import javax.naming.Name;
@@ -55,7 +56,7 @@ public class ENCFactory implements ObjectFactory {
 		return encIdStack.getList();
 	}
 
-	public static ConcurrentHashMap<Object, Context> getEncById() {
+	public static ConcurrentMap<Object, Context> getEncById() {
 		return encById;
 	}
 
@@ -130,7 +131,7 @@ public class ENCFactory implements ObjectFactory {
 		return new NamingServer();
 	}
 
-	protected Context createContext(Hashtable<String,Object> environment) throws NamingException {
+	protected Context createContext(Hashtable<String,Object> environment) throws NamingException { //NOSONAR - Hashtable is part of javax.naming interface
 		NamingServer srv = createServer();
 		return new NamingContext(environment, null, srv);
 	}
