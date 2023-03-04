@@ -37,10 +37,10 @@ import javax.naming.NamingException;
  * @author Scott.Stark@jboss.org
  */
 public class NamingContextFactory extends de.elnarion.jndi.interfaces.NamingContextFactory {
-	public static final ThreadLocal lastInitialContextEnv = new ThreadLocal();
+	public static final ThreadLocal<Hashtable<?,?>> lastInitialContextEnv = new ThreadLocal<>();
 
 	// InitialContextFactory implementation --------------------------
-	public Context getInitialContext(Hashtable env) throws NamingException {
+	public Context getInitialContext(Hashtable<?,?> env) throws NamingException {
 		lastInitialContextEnv.set(env);
 		return super.getInitialContext(env);
 	}

@@ -23,8 +23,6 @@ package de.elnarion.jndi.interfaces;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.rmi.ConnectException;
 import java.rmi.MarshalledObject;
 import java.rmi.NoSuchObjectException;
@@ -46,6 +44,7 @@ import javax.naming.InitialContext;
 import javax.naming.InvalidNameException;
 import javax.naming.LinkRef;
 import javax.naming.Name;
+import javax.naming.NameClassPair;
 import javax.naming.NameParser;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
@@ -133,7 +132,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	/**
 	 * An obsolete constant replaced by the JNP_MAX_RETRIES value
 	 */
-	public static int MAX_RETRIES = 1;
+	public static final int MAX_RETRIES = 1;
 	/**
 	 * The JBoss logging interface
 	 */
@@ -151,16 +150,16 @@ public class NamingContext implements EventContext, java.io.Serializable {
 
 	// Attributes ----------------------------------------------------
 	Naming naming;
-	Hashtable env;
+	Hashtable<String, Object> env;
 	Name prefix;
 
 	NameParser parser = new NamingParser();
 
 	// Static --------------------------------------------------------
 
-	static void removeServer(Hashtable serverEnv) {
+	static void removeServer(Hashtable<String, Object> serverEnv) {
 		// JBAS-4622. Always do this.
-		Object hostKey = serverEnv.remove("hostKey");
+		serverEnv.remove("hostKey");
 	}
 
 	/**
@@ -172,7 +171,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 * @param nameEnv the name env
 	 * @throws InvalidNameException the invalid name exception
 	 */
-	static void parseNameForScheme(Name n, Hashtable nameEnv) throws InvalidNameException {
+	static void parseNameForScheme(Name n, Hashtable<String, Object> nameEnv) throws InvalidNameException {
 		if (n.size() > 0) {
 			String scheme = n.get(0);
 			int schemeLength = 0;
@@ -209,16 +208,17 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	}
 
 	// Constructors --------------------------------------------------
-	public NamingContext(Hashtable e, Name baseName, Naming server) throws NamingException {
+	@SuppressWarnings("unchecked")
+	public NamingContext(Hashtable<String, Object> e, Name baseName, Naming server) throws NamingException {
 		if (baseName == null)
 			this.prefix = parser.parse("");
 		else
 			this.prefix = baseName;
 
 		if (e != null)
-			this.env = (Hashtable) e.clone();
+			this.env = (Hashtable<String, Object>) e.clone();
 		else
-			this.env = new Hashtable();
+			this.env = new Hashtable<>();
 
 		this.naming = server;
 	}
@@ -238,7 +238,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	}
 
 	public void rebind(Name name, Object obj) throws NamingException {
-		Hashtable refEnv = getEnv(name);
+		Hashtable<String, Object> refEnv = getEnv(name);
 		checkRef(refEnv);
 		Name parsedName = (Name) refEnv.get(JNP_PARSED_NAME);
 		if (parsedName != null)
@@ -291,7 +291,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	}
 
 	public void bind(Name name, Object obj) throws NamingException {
-		Hashtable refEnv = getEnv(name);
+		Hashtable<String, Object> refEnv = getEnv(name);
 		checkRef(refEnv);
 		Name parsedName = (Name) refEnv.get(JNP_PARSED_NAME);
 		if (parsedName != null)
@@ -348,7 +348,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	}
 
 	public Object lookup(Name name) throws NamingException {
-		Hashtable refEnv = getEnv(name);
+		Hashtable<String, Object> refEnv = getEnv(name);
 		checkRef(refEnv);
 		Name parsedName = (Name) refEnv.get(JNP_PARSED_NAME);
 		if (parsedName != null)
@@ -423,11 +423,11 @@ public class NamingContext implements EventContext, java.io.Serializable {
 				Object storedObj = mvp.get();
 				return getObjectInstanceWrapFailure(storedObj, name, refEnv);
 			} else if (res instanceof MarshalledObject) {
-				MarshalledObject mo = (MarshalledObject) res;
+				MarshalledObject<?> mo = (MarshalledObject<?>) res;
 				return mo.get();
 			} else if (res instanceof Context) {
 				// Add env
-				Enumeration keys = refEnv.keys();
+				Enumeration<String> keys = refEnv.keys();
 				while (keys.hasMoreElements()) {
 					String key = (String) keys.nextElement();
 					((Context) res).addToEnvironment(key, refEnv.get(key));
@@ -486,7 +486,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	}
 
 	public void unbind(Name name) throws NamingException {
-		Hashtable refEnv = getEnv(name);
+		Hashtable<String, Object> refEnv = getEnv(name);
 		checkRef(refEnv);
 		Name parsedName = (Name) refEnv.get(JNP_PARSED_NAME);
 		if (parsedName != null)
@@ -527,19 +527,19 @@ public class NamingContext implements EventContext, java.io.Serializable {
 		unbind(oldName);
 	}
 
-	public NamingEnumeration list(String name) throws NamingException {
+	public NamingEnumeration<NameClassPair> list(String name) throws NamingException {
 		return list(getNameParser(name).parse(name));
 	}
 
-	public NamingEnumeration list(Name name) throws NamingException {
-		Hashtable refEnv = getEnv(name);
+	public NamingEnumeration<NameClassPair> list(Name name) throws NamingException {
+		Hashtable<String, Object> refEnv = getEnv(name);
 		checkRef(refEnv);
 		Name parsedName = (Name) refEnv.get(JNP_PARSED_NAME);
 		if (parsedName != null)
 			name = parsedName;
 
 		try {
-			Collection c = null;
+			Collection<NameClassPair> c = null;
 			try {
 				c = naming.list(getAbsoluteName(name));
 			} catch (RemoteException re) {
@@ -551,8 +551,8 @@ public class NamingContext implements EventContext, java.io.Serializable {
 					// Not JBAS-4574. Throw exception and let outer logic handle it.
 					throw re;
 				}
-			}
-			return new NamingEnumerationImpl(c);
+			} 
+			return new NameClassPairEnumerationImpl(c);
 		} catch (CannotProceedException cpe) {
 			cpe.setEnvironment(refEnv);
 			Context cctx = NamingManager.getContinuationContext(cpe);
@@ -566,12 +566,12 @@ public class NamingContext implements EventContext, java.io.Serializable {
 		}
 	}
 
-	public NamingEnumeration listBindings(String name) throws NamingException {
+	public NamingEnumeration<Binding> listBindings(String name) throws NamingException {
 		return listBindings(getNameParser(name).parse(name));
 	}
 
-	public NamingEnumeration listBindings(Name name) throws NamingException {
-		Hashtable refEnv = getEnv(name);
+	public NamingEnumeration<Binding> listBindings(Name name) throws NamingException {
+		Hashtable<String, Object> refEnv = getEnv(name);
 		checkRef(refEnv);
 		Name parsedName = (Name) refEnv.get(JNP_PARSED_NAME);
 		if (parsedName != null)
@@ -579,7 +579,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 
 		try {
 			// Get list
-			Collection bindings = null;
+			Collection<?> bindings = null;
 			try {
 				// Get list
 				bindings = naming.listBindings(getAbsoluteName(name));
@@ -593,10 +593,10 @@ public class NamingContext implements EventContext, java.io.Serializable {
 					throw re;
 				}
 			}
-			Collection realBindings = new ArrayList(bindings.size());
+			Collection<Binding> realBindings = new ArrayList<Binding>(bindings.size());
 
 			// Convert marshalled objects
-			Iterator i = bindings.iterator();
+			Iterator<?> i = bindings.iterator();
 			while (i.hasNext()) {
 				Binding binding = (Binding) i.next();
 				Object obj = binding.getObject();
@@ -610,7 +610,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 					}
 				} else if (obj instanceof MarshalledObject) {
 					try {
-						obj = ((MarshalledObject) obj).get();
+						obj = ((MarshalledObject<?>) obj).get();
 					} catch (ClassNotFoundException e) {
 						NamingException ex = new CommunicationException();
 						ex.setRootCause(e);
@@ -621,7 +621,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 			}
 
 			// Return transformed list of bindings
-			return new NamingEnumerationImpl(realBindings);
+			return new BindingEnumerationImpl(realBindings);
 		} catch (CannotProceedException cpe) {
 			cpe.setEnvironment(refEnv);
 			Context cctx = NamingManager.getContinuationContext(cpe);
@@ -662,7 +662,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 		if (name.size() == 0)
 			throw new InvalidNameException("Cannot pass an empty name to createSubcontext");
 
-		Hashtable refEnv = getEnv(name);
+		Hashtable<String, Object> refEnv = getEnv(name);
 		checkRef(refEnv);
 		Name parsedName = (Name) refEnv.get(JNP_PARSED_NAME);
 		if (parsedName != null)
@@ -705,7 +705,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 		return env.remove(propName);
 	}
 
-	public Hashtable getEnvironment() throws NamingException {
+	public Hashtable<String, Object> getEnvironment() throws NamingException {
 		return env;
 	}
 
@@ -741,7 +741,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 * @return the raw object bound under name.
 	 */
 	public Object lookupLink(Name name) throws NamingException {
-		Hashtable refEnv = getEnv(name);
+		Hashtable<String, Object> refEnv = getEnv(name);
 		checkRef(refEnv);
 		Name parsedName = (Name) refEnv.get(JNP_PARSED_NAME);
 		if (parsedName != null)
@@ -833,7 +833,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	}
 	// End EventContext methods
 
-	protected Object resolveLink(Object res, Hashtable refEnv) throws NamingException {
+	protected Object resolveLink(Object res, Hashtable<String, Object> refEnv) throws NamingException {
 		Object linkResult = null;
 		try {
 			LinkRef link = (LinkRef) res;
@@ -902,7 +902,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 * @return true if the legacy and technically incorrect absolute name should be
 	 *         used, false if the context relative name should be used.
 	 */
-	private boolean useAbsoluteName(Hashtable env) {
+	private boolean useAbsoluteName(Hashtable<String, Object> env) {
 		if (env == null)
 			return true;
 		String useRelativeName = (String) env.get(JNP_USE_RELATIVE_NAME);
@@ -919,7 +919,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 * @return the object to bind to the naming server
 	 * @throws NamingException
 	 */
-	private Object getStateToBind(Object obj, Name name, Hashtable env) throws NamingException {
+	private Object getStateToBind(Object obj, Name name, Hashtable<String, Object> env) throws NamingException {
 		if (useAbsoluteName(env))
 			name = getAbsoluteName(name);
 		return NamingManager.getStateToBind(obj, name, this, env);
@@ -935,7 +935,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 * @return the fully resolved object
 	 * @throws Exception
 	 */
-	private Object getObjectInstance(Object obj, Name name, Hashtable env) throws Exception {
+	private Object getObjectInstance(Object obj, Name name, Hashtable<String, Object> env) throws Exception {
 		if (useAbsoluteName(env))
 			name = getAbsoluteName(name);
 		final Object obtained = NamingManager.getObjectInstance(obj, name, this, env);
@@ -956,7 +956,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 * @return the fully resolved object
 	 * @throws NamingException
 	 */
-	private Object getObjectInstanceWrapFailure(Object obj, Name name, Hashtable env) throws NamingException {
+	private Object getObjectInstanceWrapFailure(Object obj, Name name, Hashtable<String, Object> env) throws NamingException {
 		try {
 			return getObjectInstance(obj, name, env);
 		} catch (NamingException e) {
@@ -968,10 +968,8 @@ public class NamingContext implements EventContext, java.io.Serializable {
 		}
 	}
 
-	private void checkRef(Hashtable refEnv) throws NamingException {
+	private void checkRef(Hashtable<String, Object> refEnv) throws NamingException {
 		if (naming == null) {
-			Exception serverEx = null;
-
 			// Locate first available naming service
 			String urls = (String) refEnv.get(Context.PROVIDER_URL);
 			if (urls != null && urls.length() > 0) {
@@ -1004,25 +1002,6 @@ public class NamingContext implements EventContext, java.io.Serializable {
 						parseNameForScheme(urlAsName, null);
 					}
 				}
-
-				// If there is still no server, try discovery
-				Exception discoveryFailure = null;
-				if (naming == null) {
-					if (naming == null) {
-						StringBuffer buffer = new StringBuffer(50);
-						buffer.append("Could not obtain connection to any of these urls: ").append(urls);
-						if (discoveryFailure != null) {
-							StringWriter sw = new StringWriter();
-							PrintWriter pw = new PrintWriter(sw);
-							discoveryFailure.printStackTrace(pw);
-							buffer.append(" and discovery failed with error: ").append(sw.toString());
-						}
-						CommunicationException ce = new CommunicationException(buffer.toString());
-
-						ce.setRootCause(serverEx);
-						throw ce;
-					}
-				}
 			} else {
 				// Use server in same JVM
 				naming = localServer;
@@ -1039,8 +1018,8 @@ public class NamingContext implements EventContext, java.io.Serializable {
 			return composeName(n, prefix);
 	}
 
-	private Hashtable getEnv(Name n) throws InvalidNameException {
-		Hashtable nameEnv = env;
+	private Hashtable<String, Object> getEnv(Name n) throws InvalidNameException {
+		Hashtable<String, Object> nameEnv = env;
 		env.remove(JNP_PARSED_NAME);
 		parseNameForScheme(n, nameEnv);
 		return nameEnv;
@@ -1058,7 +1037,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 *         we were able to succesfully flush the cache and acquire a new stub;
 	 *         <code>false</code> otherwise.
 	 */
-	private boolean handleStaleNamingStub(Exception e, Hashtable refEnv) {
+	private boolean handleStaleNamingStub(Exception e, Hashtable<String, Object> refEnv) {
 		if (e instanceof NoSuchObjectException || e.getCause() instanceof NoSuchObjectException) {
 			try {
 				if (log.isDebugEnabled()) {
@@ -1097,7 +1076,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 *         were able to succesfully flush the cache and acquire a new stub;
 	 *         <code>false</code> otherwise.
 	 */
-	private boolean handleDyingServer(Exception e, Hashtable refEnv) {
+	private boolean handleDyingServer(Exception e, Hashtable<String, Object> refEnv) {
 		if (e instanceof UnmarshalException && e.getCause() != null && (e.getCause() instanceof EOFException)) {
 			try {
 				if (log.isDebugEnabled()) {
@@ -1133,7 +1112,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 *         server and we were able to succesfully flush the cache and acquire a
 	 *         new stub; <code>false</code> otherwise.
 	 */
-	private boolean handleServerStartupShutdown(Exception e, Hashtable refEnv) {
+	private boolean handleServerStartupShutdown(Exception e, Hashtable<String, Object> refEnv) {
 		if (e instanceof ServiceUnavailableException) {
 			try {
 				if (log.isDebugEnabled()) {

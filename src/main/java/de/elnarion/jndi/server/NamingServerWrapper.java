@@ -24,8 +24,10 @@ package de.elnarion.jndi.server;
 import java.rmi.RemoteException;
 import java.util.Collection;
 
+import javax.naming.Binding;
 import javax.naming.Context;
 import javax.naming.Name;
+import javax.naming.NameClassPair;
 import javax.naming.NamingException;
 import javax.naming.event.EventContext;
 import javax.naming.event.NamingListener;
@@ -57,11 +59,11 @@ public class NamingServerWrapper implements Naming, NamingEvents {
 		return delegate.createSubcontext(name);
 	}
 
-	public Collection list(Name name) throws NamingException, RemoteException {
+	public Collection<NameClassPair> list(Name name) throws NamingException, RemoteException {
 		return delegate.list(name);
 	}
 
-	public Collection listBindings(Name name) throws NamingException, RemoteException {
+	public Collection<Binding> listBindings(Name name) throws NamingException, RemoteException {
 		return delegate.listBindings(name);
 	}
 

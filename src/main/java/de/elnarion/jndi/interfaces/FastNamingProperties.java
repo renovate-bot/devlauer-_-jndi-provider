@@ -24,9 +24,11 @@ package de.elnarion.jndi.interfaces;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.util.Collection;
 import java.util.Enumeration;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * This class exists because the JNDI API set wisely uses java.util.Properties
@@ -45,14 +47,17 @@ class FastNamingProperties extends Properties {
 	FastNamingProperties() {
 	}
 
-	public Object setProperty(String s1, String s2) {
+	@Override
+	public synchronized Object setProperty(String s1, String s2) {
 		throw new UnsupportedOperationException();
 	}
 
-	public void load(InputStream is) throws java.io.IOException {
+	@Override
+	public synchronized void load(InputStream is) throws java.io.IOException {
 		throw new UnsupportedOperationException();
 	}
 
+	@Override
 	public String getProperty(String s) {
 		if (s.equals("jndi.syntax.direction")) {
 			return "left_to_right";
@@ -65,6 +70,7 @@ class FastNamingProperties extends Properties {
 		}
 	}
 
+	@Override
 	public String getProperty(String name, String defaultValue) {
 		String ret = getProperty(name);
 		if (ret == null) {
@@ -73,65 +79,80 @@ class FastNamingProperties extends Properties {
 		return ret;
 	}
 
-	public Enumeration propertyNames() {
+	@Override
+	public Enumeration<Object> propertyNames() {
 		throw new UnsupportedOperationException();
 	}
 
+	@Override
 	public void list(PrintStream ps) {
 		throw new UnsupportedOperationException();
 	}
 
+	@Override
 	public void list(PrintWriter ps) {
 		throw new UnsupportedOperationException();
 	}
 
 	// methods from Hashtable
 
-	public int size() {
+	@Override
+	public synchronized int size() {
 		throw new UnsupportedOperationException();
 	}
 
-	public boolean isEmpty() {
+	@Override
+	public synchronized boolean isEmpty() {
 		throw new UnsupportedOperationException();
 	}
 
-	public Enumeration keys() {
+	@Override
+	public synchronized Enumeration<Object> keys() {
 		throw new UnsupportedOperationException();
 	}
 
-	public Enumeration elements() {
+	@Override
+	public synchronized Enumeration<Object> elements() {
 		throw new UnsupportedOperationException();
 	}
 
-	public boolean contains(Object o) {
+	@Override
+	public synchronized boolean contains(Object o) {
 		throw new UnsupportedOperationException();
 	}
 
-	public boolean containsValue(Object o) {
+	@Override
+	public synchronized boolean containsValue(Object o) {
 		throw new UnsupportedOperationException();
 	}
 
-	public boolean containsKey(Object o) {
+	@Override
+	public synchronized boolean containsKey(Object o) {
 		throw new UnsupportedOperationException();
 	}
 
-	public Object get(Object o) {
+	@Override
+	public synchronized Object get(Object o) {
 		throw new UnsupportedOperationException();
 	}
 
-	public Object put(Object o1, Object o2) {
+	@Override
+	public synchronized Object put(Object o1, Object o2) {
 		throw new UnsupportedOperationException();
 	}
 
-	public Object remove(Object o) {
+	@Override
+	public synchronized Object remove(Object o) {
 		throw new UnsupportedOperationException();
 	}
 
-	public void putAll(Map m) {
+	@Override
+	public synchronized void putAll(Map<? extends Object, ? extends Object> m) {
 		throw new UnsupportedOperationException();
 	}
 
-	public void clear() {
+	@Override
+	public synchronized void clear() {
 		throw new UnsupportedOperationException();
 	}
 
@@ -139,27 +160,33 @@ class FastNamingProperties extends Properties {
 		throw new UnsupportedOperationException();
 	}
 
-	public String toString() {
+	@Override
+	public synchronized String toString() {
 		throw new UnsupportedOperationException();
 	}
 
-	public java.util.Set keySet() {
+	@Override
+	public Set<Object> keySet() {
 		throw new UnsupportedOperationException();
 	}
 
-	public java.util.Set entrySet() {
+	@Override
+	public Set<Map.Entry<Object,Object>> entrySet() {
 		throw new UnsupportedOperationException();
 	}
 
-	public java.util.Collection values() {
+	@Override
+	public Collection<Object> values() {
 		throw new UnsupportedOperationException();
 	}
 
-	public boolean equals(Object o) {
+	@Override
+	public synchronized boolean equals(Object o) {
 		throw new UnsupportedOperationException();
 	}
 
-	public int hashCode() {
+	@Override
+	public synchronized int hashCode() {
 		throw new UnsupportedOperationException();
 	}
 }

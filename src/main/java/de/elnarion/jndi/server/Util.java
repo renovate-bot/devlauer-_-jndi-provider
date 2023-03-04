@@ -38,15 +38,21 @@ import org.slf4j.LoggerFactory;
  * @author adrian@jboss.com
  */
 public class Util {
+	
+	private Util() {
+		// only static helper methods
+	}
+	
+	/** The Constant log. */
 	private static final Logger log = LoggerFactory.getLogger(Util.class);
 
 	/**
 	 * Create a subcontext including any intermediate contexts.
-	 * 
+	 *
 	 * @param ctx  the parent JNDI Context under which value will be bound
 	 * @param name the name relative to ctx of the subcontext.
 	 * @return The new or existing JNDI subcontext
-	 * @throws javax.naming.NamingException on any JNDI failure
+	 * @throws NamingException the naming exception
 	 */
 	public static Context createSubcontext(Context ctx, String name) throws NamingException {
 		Name n = ctx.getNameParser("").parse(name);
@@ -77,8 +83,8 @@ public class Util {
 	}
 
 	/**
-	 * Bind val to name in ctx, and make sure that all intermediate contexts exist
-	 * 
+	 * Bind val to name in ctx, and make sure that all intermediate contexts exist.
+	 *
 	 * @param ctx   the parent JNDI Context under which value will be bound
 	 * @param name  the name relative to ctx where value will be bound
 	 * @param value the value to bind.
@@ -90,8 +96,8 @@ public class Util {
 	}
 
 	/**
-	 * Bind val to name in ctx, and make sure that all intermediate contexts exist
-	 * 
+	 * Bind val to name in ctx, and make sure that all intermediate contexts exist.
+	 *
 	 * @param ctx   the parent JNDI Context under which value will be bound
 	 * @param name  the name relative to ctx where value will be bound
 	 * @param value the value to bind.
@@ -105,8 +111,8 @@ public class Util {
 	}
 
 	/**
-	 * Rebind val to name in ctx, and make sure that all intermediate contexts exist
-	 * 
+	 * Rebind val to name in ctx, and make sure that all intermediate contexts exist.
+	 *
 	 * @param ctx   the parent JNDI Context under which value will be bound
 	 * @param name  the name relative to ctx where value will be bound
 	 * @param value the value to bind.
@@ -118,8 +124,8 @@ public class Util {
 	}
 
 	/**
-	 * Rebind val to name in ctx, and make sure that all intermediate contexts exist
-	 * 
+	 * Rebind val to name in ctx, and make sure that all intermediate contexts exist.
+	 *
 	 * @param ctx   the parent JNDI Context under which value will be bound
 	 * @param name  the name relative to ctx where value will be bound
 	 * @param value the value to bind.
@@ -133,8 +139,8 @@ public class Util {
 	}
 
 	/**
-	 * Unbinds a name from ctx, and removes parents if they are empty
-	 * 
+	 * Unbinds a name from ctx, and removes parents if they are empty.
+	 *
 	 * @param ctx  the parent JNDI Context under which the name will be unbound
 	 * @param name The name to unbind
 	 * @throws NamingException for any error
@@ -144,8 +150,8 @@ public class Util {
 	}
 
 	/**
-	 * Unbinds a name from ctx, and removes parents if they are empty
-	 * 
+	 * Unbinds a name from ctx, and removes parents if they are empty.
+	 *
 	 * @param ctx  the parent JNDI Context under which the name will be unbound
 	 * @param name The name to unbind
 	 * @throws NamingException for any error
@@ -166,14 +172,15 @@ public class Util {
 	}
 
 	/**
-	 * Lookup an object in the default initial context
-	 * 
+	 * Lookup an object in the default initial context.
+	 *
 	 * @param name  the name to lookup
 	 * @param clazz the expected type
 	 * @return the object
-	 * @throws Exception for any error
+	 * @throws ClassCastException the class cast exception
+	 * @throws NamingException the naming exception
 	 */
-	public static Object lookup(String name, Class<?> clazz) throws Exception {
+	public static Object lookup(String name, Class<?> clazz) throws ClassCastException, NamingException{
 		InitialContext ctx = new InitialContext();
 		try {
 			return lookup(ctx, name, clazz);
@@ -183,14 +190,14 @@ public class Util {
 	}
 
 	/**
-	 * Lookup an object in the default initial context
-	 * 
+	 * Lookup an object in the default initial context.
+	 *
 	 * @param name  the name to lookup
 	 * @param clazz the expected type
 	 * @return the object
-	 * @throws Exception for any error
+	 * @throws NamingException the naming exception
 	 */
-	public static Object lookup(Name name, Class<?> clazz) throws Exception {
+	public static Object lookup(Name name, Class<?> clazz) throws NamingException  {
 		InitialContext ctx = new InitialContext();
 		try {
 			return lookup(ctx, name, clazz);
@@ -200,38 +207,39 @@ public class Util {
 	}
 
 	/**
-	 * Lookup an object in the given context
-	 * 
+	 * Lookup an object in the given context.
+	 *
 	 * @param context the context
 	 * @param name    the name to lookup
 	 * @param clazz   the expected type
 	 * @return the object
-	 * @throws Exception for any error
+	 * @throws ClassCastException the class cast exception
+	 * @throws NamingException the naming exception
 	 */
-	public static Object lookup(Context context, String name, Class clazz) throws Exception {
+	public static Object lookup(Context context, String name, Class<?> clazz) throws ClassCastException, NamingException  {
 		Object result = context.lookup(name);
 		checkObject(context, name, result, clazz);
 		return result;
 	}
 
 	/**
-	 * Lookup an object in the given context
-	 * 
+	 * Lookup an object in the given context.
+	 *
 	 * @param context the context
 	 * @param name    the name to lookup
 	 * @param clazz   the expected type
 	 * @return the object
-	 * @throws Exception for any error
+	 * @throws NamingException the naming exception
 	 */
-	public static Object lookup(Context context, Name name, Class clazz) throws Exception {
+	public static Object lookup(Context context, Name name, Class<?> clazz) throws NamingException {
 		Object result = context.lookup(name);
 		checkObject(context, name.toString(), result, clazz);
 		return result;
 	}
 
 	/**
-	 * Create a link
-	 * 
+	 * Create a link.
+	 *
 	 * @param fromName the from name
 	 * @param toName   the to name
 	 * @throws NamingException for any error
@@ -242,8 +250,8 @@ public class Util {
 	}
 
 	/**
-	 * Create a link
-	 * 
+	 * Create a link.
+	 *
 	 * @param ctx      the context
 	 * @param fromName the from name
 	 * @param toName   the to name
@@ -263,16 +271,16 @@ public class Util {
 			}
 		}
 
-		log.debug("atom: " + atom);
-		log.debug("link: " + link);
+		log.debug("atom: {}", atom);
+		log.debug("link: {}", link);
 
 		fromCtx.rebind(atom, link);
 
-		log.debug("Bound link " + fromName + " to " + toName);
+		log.debug("Bound link {} to {}",  fromName, toName);
 	}
 
 	/**
-	 * Remove the link ref
+	 * Remove the link ref.
 	 *
 	 * @param name the name of the link binding
 	 * @throws NamingException for any error
@@ -283,30 +291,31 @@ public class Util {
 	}
 
 	/**
-	 * Remove the link ref
+	 * Remove the link ref.
 	 *
 	 * @param ctx  the context
 	 * @param name the name of the link binding
 	 * @throws NamingException for any error
 	 */
 	public static void removeLinkRef(Context ctx, String name) throws NamingException {
-		log.debug("Unbinding link " + name);
+		log.debug("Unbinding link {}", name);
 		ctx.unbind(name);
 	}
 
 	/**
-	 * Checks an object implements the given class
-	 * 
+	 * Checks an object implements the given class.
+	 *
 	 * @param context the context
 	 * @param name    the name to lookup
 	 * @param object  the object
 	 * @param clazz   the expected type
-	 * @throws Exception for any error
+	 * @throws ClassCastException the class cast exception
+	 * @throws NamingException the naming exception
 	 */
-	protected static void checkObject(Context context, String name, Object object, Class clazz) throws Exception {
-		Class objectClass = object.getClass();
-		if (clazz.isAssignableFrom(objectClass) == false) {
-			StringBuffer buffer = new StringBuffer(100);
+	protected static void checkObject(Context context, String name, Object object, Class<?> clazz) throws ClassCastException, NamingException {
+		Class<?> objectClass = object.getClass();
+		if (!clazz.isAssignableFrom(objectClass)) {
+			StringBuilder buffer = new StringBuilder(100);
 			buffer.append("Object at '").append(name);
 			buffer.append("' in context ").append(context.getEnvironment());
 			buffer.append(" is not an instance of ");
@@ -318,16 +327,16 @@ public class Util {
 	}
 
 	/**
-	 * Append Class Info
+	 * Append Class Info.
 	 *
 	 * @param buffer the buffer to append to
 	 * @param clazz  the class to describe
 	 */
-	protected static void appendClassInfo(StringBuffer buffer, Class clazz) {
+	protected static void appendClassInfo(StringBuilder buffer, Class<?> clazz) {
 		buffer.append("[class=").append(clazz.getName());
 		buffer.append(" classloader=").append(clazz.getClassLoader());
 		buffer.append(" interfaces={");
-		Class[] interfaces = clazz.getInterfaces();
+		Class<?>[] interfaces = clazz.getInterfaces();
 		for (int i = 0; i < interfaces.length; ++i) {
 			if (i > 0)
 				buffer.append(", ");

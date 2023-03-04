@@ -21,12 +21,11 @@
 */
 package de.elnarion.jndi.server;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
+
 import javax.naming.Context;
 import javax.naming.Name;
 import javax.naming.NamingException;
@@ -47,10 +46,10 @@ public class ENCFactory implements ObjectFactory {
 	// Constants -----------------------------------------------------
 
 	// Attributes ----------------------------------------------------
-	private static WeakHashMap classloaderKeyedEncs = new WeakHashMap();
+	private static WeakHashMap<ClassLoader,Context> classloaderKeyedEncs = new WeakHashMap<>();
 	private static ClassLoader topLoader;
-	private static ThreadLocalStack<Object> encIdStack = new ThreadLocalStack<Object>();
-	private static ConcurrentHashMap<Object, Context> encById = new ConcurrentHashMap<Object, Context>();
+	private static ThreadLocalStack<Object> encIdStack = new ThreadLocalStack<>();
+	private static ConcurrentHashMap<Object, Context> encById = new ConcurrentHashMap<>();
 
 	public static List<Object> getIdStack() {
 		return encIdStack.getList();
@@ -85,12 +84,13 @@ public class ENCFactory implements ObjectFactory {
 	// Public --------------------------------------------------------
 
 	// ObjectFactory implementation ----------------------------------
-	public Object getObjectInstance(Object obj, Name name, Context nameCtx, Hashtable environment) throws Exception {
+	@SuppressWarnings("unchecked")
+	public Object getObjectInstance(Object obj, Name name, Context nameCtx, Hashtable<?,?> environment) throws Exception {
 		Object currentId = encIdStack.get();
 		if (currentId != null) {
 			Context compCtx = encById.get(currentId);
 			if (compCtx == null) {
-				compCtx = createContext(environment);
+				compCtx = createContext((Hashtable<String, Object>) environment);
 				encById.put(currentId, compCtx);
 			}
 			return compCtx;
@@ -98,7 +98,7 @@ public class ENCFactory implements ObjectFactory {
 		// Get naming for this component
 		ClassLoader ctxClassLoader = this.getClass().getClassLoader();
 		synchronized (classloaderKeyedEncs) {
-			Context compCtx = (Context) classloaderKeyedEncs.get(ctxClassLoader);
+			Context compCtx = classloaderKeyedEncs.get(ctxClassLoader);
 
 			/*
 			 * If this is the first time we see ctxClassLoader first check to see if a
@@ -107,12 +107,12 @@ public class ENCFactory implements ObjectFactory {
 			if (compCtx == null) {
 				ClassLoader loader = ctxClassLoader;
 				while (loader != null && loader != topLoader && compCtx == null) {
-					compCtx = (Context) classloaderKeyedEncs.get(loader);
+					compCtx = classloaderKeyedEncs.get(loader);
 					loader = this.getClass().getClassLoader();
 				}
 				// If we did not find an ENC create it
 				if (compCtx == null) {
-					compCtx = createContext(environment);
+					compCtx = createContext((Hashtable<String, Object>) environment);
 					classloaderKeyedEncs.put(ctxClassLoader, compCtx);
 				}
 			}
@@ -130,7 +130,7 @@ public class ENCFactory implements ObjectFactory {
 		return new NamingServer();
 	}
 
-	protected Context createContext(Hashtable environment) throws NamingException {
+	protected Context createContext(Hashtable<String,Object> environment) throws NamingException {
 		NamingServer srv = createServer();
 		return new NamingContext(environment, null, srv);
 	}

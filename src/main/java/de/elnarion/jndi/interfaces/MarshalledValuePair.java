@@ -37,7 +37,7 @@ public class MarshalledValuePair implements Serializable {
 	private static final long serialVersionUID = -3403843515711139134L;
 
 	private static boolean enableCallByReference = true;
-	public MarshalledObject marshalledValue;
+	public MarshalledObject<?> marshalledValue;
 	public transient Object value;
 
 	/**
@@ -63,7 +63,7 @@ public class MarshalledValuePair implements Serializable {
 	/** Creates a new instance of MashalledValuePair */
 	public MarshalledValuePair(Object value) throws IOException {
 		this.value = value;
-		this.marshalledValue = new MarshalledObject(value);
+		this.marshalledValue = new MarshalledObject<>(value);
 	}
 
 	public Object get() throws ClassNotFoundException, IOException {

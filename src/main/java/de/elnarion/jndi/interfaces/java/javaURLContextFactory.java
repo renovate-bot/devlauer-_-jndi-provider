@@ -41,7 +41,7 @@ public class javaURLContextFactory implements ObjectFactory {
 	// Attributes ----------------------------------------------------
 
 	// Static --------------------------------------------------------
-	private static ThreadLocal server = new ThreadLocal();
+	private static ThreadLocal<Naming> server = new ThreadLocal<>();
 
 	public static void setRoot(Naming srv) {
 		server.set(srv);
@@ -56,12 +56,13 @@ public class javaURLContextFactory implements ObjectFactory {
 	// Public --------------------------------------------------------
 
 	// ObjectFactory implementation ----------------------------------
-	public Object getObjectInstance(Object obj, Name name, Context nameCtx, Hashtable environment) throws Exception {
+	@SuppressWarnings("unchecked")
+	public Object getObjectInstance(Object obj, Name name, Context nameCtx, Hashtable<?,?> environment) throws Exception {
 		if (obj == null)
-			return new NamingContext(environment, name, (Naming) server.get());
+			return new NamingContext((Hashtable<String, Object>) environment, name, (Naming) server.get());
 		else if (obj instanceof String) {
 			String url = (String) obj;
-			Context ctx = new NamingContext(environment, name, (Naming) server.get());
+			Context ctx = new NamingContext((Hashtable<String, Object>) environment, name, (Naming) server.get());
 
 			Name n = ctx.getNameParser(name).parse(url.substring(url.indexOf(":") + 1));
 			if (n.size() >= 3) {

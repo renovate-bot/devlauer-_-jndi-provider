@@ -22,12 +22,13 @@
 package de.elnarion.jndi.interfaces;
 
 import java.util.Hashtable;
-import javax.naming.CompoundName;
+
 import javax.naming.Context;
 import javax.naming.Name;
 import javax.naming.NamingException;
 import javax.naming.Reference;
-import javax.naming.spi.*;
+import javax.naming.spi.InitialContextFactory;
+import javax.naming.spi.ObjectFactory;
 
 /**
  * The jnp naming provider InitialContextFactory implementation.
@@ -38,12 +39,13 @@ import javax.naming.spi.*;
  */
 public class NamingContextFactory implements InitialContextFactory, ObjectFactory {
 	// InitialContextFactory implementation --------------------------
-	public Context getInitialContext(Hashtable env) throws NamingException {
-		return new NamingContext(env, null, null);
+	@SuppressWarnings("unchecked")
+	public Context getInitialContext(Hashtable<?,?> env) throws NamingException {
+		return new NamingContext((Hashtable<String, Object>) env, null, null);
 	}
 
 	// ObjectFactory implementation ----------------------------------
-	public Object getObjectInstance(Object obj, Name name, Context nameCtx, Hashtable environment) throws Exception {
+	public Object getObjectInstance(Object obj, Name name, Context nameCtx, Hashtable<?,?> environment) throws Exception {
 		Context ctx = getInitialContext(environment);
 		Reference ref = (Reference) obj;
 		return ctx.lookup((String) ref.get("URL").getContent());

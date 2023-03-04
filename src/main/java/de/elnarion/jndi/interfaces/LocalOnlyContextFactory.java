@@ -61,10 +61,11 @@ public class LocalOnlyContextFactory implements InitialContextFactory {
 	}
 
 	// InitialContextFactory implementation --------------------------
-	public Context getInitialContext(Hashtable<?, ?> env) throws NamingException {
+	@SuppressWarnings("unchecked")
+	public Context getInitialContext(Hashtable<?,?> env) throws NamingException {
 		boolean debug = log.isDebugEnabled();
 		if (debug)
-			log.debug("getInitialContext, env: " + env);
+			log.debug("getInitialContext, env: {}", env);
 		String name = null;
 		Naming localServer = null;
 		if (env != null) {
@@ -86,7 +87,7 @@ public class LocalOnlyContextFactory implements InitialContextFactory {
 			if (lswr != null)
 				localServer = lswr.get();
 			if (debug && localServer != null)
-				log.debug("Set naming from " + NamingContext.JNP_NAMING_INSTANCE_NAME + "=" + name);
+				log.debug("Set naming from {}={}", NamingContext.JNP_NAMING_INSTANCE_NAME , name);
 		}
 		// Lastly try the JVM global NamingContext.local value
 		if (localServer == null) {
@@ -99,15 +100,15 @@ public class LocalOnlyContextFactory implements InitialContextFactory {
 			throw new NamingException("Failed to determine local server from: " + env);
 
 		// If this is a named instance add it to the localServers set
-		if (name != null && localServers.containsKey(name) == false) {
-			localServers.put(name, new WeakReference<Naming>(localServer));
+		if (name != null && !localServers.containsKey(name) ) {
+			localServers.put(name, new WeakReference<>(localServer));
 			if (debug)
-				log.debug("Set localServers:" + name);
+				log.debug("Set localServers:{}", name);
 		}
 
 		// Pass in an empty env if its null
 		if (env == null)
-			env = new Hashtable();
-		return new NamingContext(env, null, localServer);
+			env = new Hashtable<>();
+		return new NamingContext((Hashtable<String, Object>) env, null, localServer);
 	}
 }

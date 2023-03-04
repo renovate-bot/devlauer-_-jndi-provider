@@ -24,6 +24,7 @@ package de.elnarion.jndi.interfaces;
 import java.util.Collection;
 import java.util.Iterator;
 
+import javax.naming.NameClassPair;
 import javax.naming.NamingEnumeration;
 
 /**
@@ -32,16 +33,16 @@ import javax.naming.NamingEnumeration;
  * @author oberg
  * @author Scott.Stark@jboss.org
  */
-public class NamingEnumerationImpl implements NamingEnumeration {
+public class NameClassPairEnumerationImpl implements NamingEnumeration<NameClassPair> {
 	// Constants -----------------------------------------------------
 
 	// Attributes ----------------------------------------------------
-	Iterator iter;
+	Iterator<NameClassPair> iter;
 
 	// Static --------------------------------------------------------
 
 	// Constructors --------------------------------------------------
-	NamingEnumerationImpl(Collection list) {
+	NameClassPairEnumerationImpl(Collection<NameClassPair> list) {
 		iter = list.iterator();
 	}
 
@@ -52,7 +53,7 @@ public class NamingEnumerationImpl implements NamingEnumeration {
 		return iter.hasNext();
 	}
 
-	public Object nextElement() {
+	public NameClassPair nextElement() {
 		return iter.next();
 	}
 
@@ -61,7 +62,7 @@ public class NamingEnumerationImpl implements NamingEnumeration {
 		return iter.hasNext();
 	}
 
-	public Object next() {
+	public NameClassPair next() {
 		return iter.next();
 	}
 
