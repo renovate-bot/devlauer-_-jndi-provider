@@ -133,47 +133,57 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 			throw new InvalidNameException("An empty name cannot be passed to bind");
 		} else if (name.size() > 1) {
 			// Recurse to find correct context
-			Object ctx = getObject(name);
-			if (ctx != null) {
-				if (ctx instanceof NamingServer) {
-					NamingServer ns = (NamingServer) ctx;
-					ns.bind(name.getSuffix(1), obj, className);
-				} else if (ctx instanceof Reference) {
-					// Federation
-					if (((Reference) ctx).get("nns") != null) {
-						CannotProceedException cpe = new CannotProceedException();
-						cpe.setResolvedObj(ctx);
-						cpe.setRemainingName(name.getSuffix(1));
-						throw cpe;
-					} else {
-						throw new NotContextException();
-					}
+			findRightContextAndBind(name, obj, className);
+		} else {
+			// Bind object
+			bindAndNotifyListeners(name, obj, className);
+		}
+	}
+
+	private void findRightContextAndBind(Name name, Object obj, String className)
+			throws NamingException {
+		Object ctx = getObject(name);
+		if (ctx != null) {
+			if (ctx instanceof NamingServer) {
+				NamingServer ns = (NamingServer) ctx;
+				ns.bind(name.getSuffix(1), obj, className);
+			} else if (ctx instanceof Reference) {
+				// Federation
+				if (((Reference) ctx).get("nns") != null) {
+					CannotProceedException cpe = new CannotProceedException();
+					cpe.setResolvedObj(ctx);
+					cpe.setRemainingName(name.getSuffix(1));
+					throw cpe;
 				} else {
 					throw new NotContextException();
 				}
 			} else {
-				throw new NameNotFoundException(name.toString() + " in: " + prefix);
+				throw new NotContextException();
 			}
 		} else {
-			// Bind object
-			if (name.get(0).equals("")) {
-				throw new InvalidNameException("An empty name cannot be passed to bind");
-			} else {
-				if (debug)
-					log.debug("bind {}={}, {}", name, obj, className);
-				try {
-					getBinding(name);
-					// Already bound
-					throw new NameAlreadyBoundException(name.toString());
-				} catch (NameNotFoundException e) {
-					Name fullName = (Name) prefix.clone();
-					fullName.addAll(name);
+			throw new NameNotFoundException(name.toString() + " in: " + prefix);
+		}
+	}
 
-					Binding newb = setBinding(name, obj, className);
-					// Notify event listeners
-					Binding oldb = null;
-					this.fireEvent(fullName, oldb, newb, NamingEvent.OBJECT_ADDED, "bind");
-				}
+	private void bindAndNotifyListeners(Name name, Object obj, String className)
+			throws InvalidNameException, NameAlreadyBoundException {
+		if (name.get(0).equals("")) {
+			throw new InvalidNameException("An empty name cannot be passed to bind");
+		} else {
+			if (debug)
+				log.debug("bind {}={}, {}", name, obj, className);
+			try {
+				getBinding(name);
+				// Already bound
+				throw new NameAlreadyBoundException(name.toString());
+			} catch (NameNotFoundException e) {
+				Name fullName = (Name) prefix.clone();
+				fullName.addAll(name);
+
+				Binding newb = setBinding(name, obj, className);
+				// Notify event listeners
+				Binding oldb = null;
+				this.fireEvent(fullName, oldb, newb, NamingEvent.OBJECT_ADDED, "bind");
 			}
 		}
 	}

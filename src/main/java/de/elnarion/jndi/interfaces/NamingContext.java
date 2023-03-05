@@ -341,52 +341,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 			Name n = getAbsoluteName(name);
 			Object res = null;
 			res = lookupValueWithExceptionHandling(refEnv, n);
-			if (res instanceof MarshalledValuePair) {
-				MarshalledValuePair mvp = (MarshalledValuePair) res;
-				Object storedObj = mvp.get();
-				return getObjectInstanceWrapFailure(storedObj, name, refEnv);
-			} else if (res instanceof MarshalledObject) {
-				MarshalledObject<?> mo = (MarshalledObject<?>) res;
-				return mo.get();
-			} else if (res instanceof Context) {
-				// Add env
-				Enumeration<String> keys = refEnv.keys();
-				while (keys.hasMoreElements()) {
-					String key = keys.nextElement();
-					((Context) res).addToEnvironment(key, refEnv.get(key));
-				}
-				return res;
-			} else if (res instanceof ResolveResult) {
-				// Dereference partial result
-				ResolveResult rr = (ResolveResult) res;
-				Object resolveRes = rr.getResolvedObj();
-				Object context;
-				Object instanceID;
-
-				if (resolveRes instanceof LinkRef) {
-					context = resolveLink(resolveRes, null);
-					instanceID = ((LinkRef) resolveRes).getLinkName();
-				} else {
-					context = getObjectInstanceWrapFailure(resolveRes, name, refEnv);
-					instanceID = context;
-				}
-
-				if (!(context instanceof Context)) {
-					throw new NotContextException(instanceID + " is not a Context");
-				}
-				Context ncontext = (Context) context;
-				return ncontext.lookup(rr.getRemainingName());
-			} else if (res instanceof LinkRef) {
-				// Dereference link
-				res = resolveLink(res, refEnv);
-			} else if (res instanceof Reference) {
-				// Dereference object
-				res = getObjectInstanceWrapFailure(res, name, refEnv);
-				if (res instanceof LinkRef)
-					res = resolveLink(res, refEnv);
-			}
-
-			return res;
+			return getLookupObjectFromResource(res, refEnv, name);
 		} catch (CannotProceedException cpe) {
 			cpe.setEnvironment(refEnv);
 			Context cctx = NamingManager.getContinuationContext(cpe);
@@ -404,8 +359,58 @@ public class NamingContext implements EventContext, java.io.Serializable {
 		}
 	}
 
-	private Object lookupValueWithExceptionHandling(Hashtable<String, Object> refEnv, Name n )
-			throws NamingException {
+	private Object getLookupObjectFromResource(Object res, Hashtable<String, Object> refEnv, Name name)
+			throws ClassNotFoundException, IOException, NamingException {
+		if (res instanceof MarshalledValuePair) {
+			MarshalledValuePair mvp = (MarshalledValuePair) res;
+			Object storedObj = mvp.get();
+			return getObjectInstanceWrapFailure(storedObj, name, refEnv);
+		} else if (res instanceof MarshalledObject) {
+			MarshalledObject<?> mo = (MarshalledObject<?>) res;
+			return mo.get();
+		} else if (res instanceof Context) {
+			// Add env
+			Enumeration<String> keys = refEnv.keys();
+			while (keys.hasMoreElements()) {
+				String key = keys.nextElement();
+				((Context) res).addToEnvironment(key, refEnv.get(key));
+			}
+			return res;
+		} else if (res instanceof ResolveResult) {
+			// Dereference partial result
+			ResolveResult rr = (ResolveResult) res;
+			Object resolveRes = rr.getResolvedObj();
+			Object context;
+			Object instanceID;
+
+			if (resolveRes instanceof LinkRef) {
+				context = resolveLink(resolveRes, null);
+				instanceID = ((LinkRef) resolveRes).getLinkName();
+			} else {
+				context = getObjectInstanceWrapFailure(resolveRes, name, refEnv);
+				instanceID = context;
+			}
+
+			if (!(context instanceof Context)) {
+				throw new NotContextException(instanceID + " is not a Context");
+			}
+			Context ncontext = (Context) context;
+			return ncontext.lookup(rr.getRemainingName());
+		} else if (res instanceof LinkRef) {
+			// Dereference link
+			res = resolveLink(res, refEnv);
+			return res;
+		} else if (res instanceof Reference) {
+			// Dereference object
+			res = getObjectInstanceWrapFailure(res, name, refEnv);
+			if (res instanceof LinkRef)
+				res = resolveLink(res, refEnv);
+			return res;
+		}
+		return res;
+	}
+
+	private Object lookupValueWithExceptionHandling(Hashtable<String, Object> refEnv, Name n) throws NamingException {
 		try {
 			return naming.lookup(n);
 		} catch (ServiceUnavailableException re) {
@@ -508,13 +513,13 @@ public class NamingContext implements EventContext, java.io.Serializable {
 			cpe.setEnvironment(refEnv);
 			Context cctx = NamingManager.getContinuationContext(cpe);
 			return cctx.listBindings(cpe.getRemainingName());
-		} catch (IOException|ClassNotFoundException e) {
+		} catch (IOException | ClassNotFoundException e) {
 			naming = null;
 			removeServer(refEnv);
 			NamingException ex = new CommunicationException();
 			ex.setRootCause(e);
 			throw ex;
-		} 
+		}
 	}
 
 	private Object extracted(Object obj) throws IOException, NamingException {
@@ -819,40 +824,41 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	}
 
 	private void checkRef(Hashtable<String, Object> refEnv) throws NamingException {
-		if (naming == null) {
-			// Locate first available naming service
-			String urls = (String) refEnv.get(Context.PROVIDER_URL);
-			if (urls != null && urls.length() > 0) {
-				StringTokenizer tokenizer = new StringTokenizer(urls, ",");
+		if (naming != null) {
+			return;
+		}
+		// Locate first available naming service
+		String urls = (String) refEnv.get(Context.PROVIDER_URL);
+		if (urls != null && urls.length() > 0) {
+			StringTokenizer tokenizer = new StringTokenizer(urls, ",");
 
-				// If provider list is unordered, first check for a cached connection to any
-				// provider
-				String unorderedProviderList = (String) refEnv.get(JNP_UNORDERED_PROVIDER_LIST);
+			// If provider list is unordered, first check for a cached connection to any
+			// provider
+			String unorderedProviderList = (String) refEnv.get(JNP_UNORDERED_PROVIDER_LIST);
 
-				// If unset, set to global which defaults to false.
-				if (unorderedProviderList == null) {
-					unorderedProviderList = GLOBAL_UNORDERED_PROVIDER_LIST;
-				}
+			// If unset, set to global which defaults to false.
+			if (unorderedProviderList == null) {
+				unorderedProviderList = GLOBAL_UNORDERED_PROVIDER_LIST;
+			}
 
-				if (Boolean.valueOf(unorderedProviderList) == Boolean.TRUE) {
-					while (tokenizer.hasMoreElements()) {
-						String url = tokenizer.nextToken();
-						// Parse the url into a host:port form, stripping any protocol
-						Name urlAsName = getNameParser("").parse(url);
-						parseNameForScheme(urlAsName, null);
-					}
-					tokenizer = new StringTokenizer(urls, ",");
-				}
+			if (Boolean.valueOf(unorderedProviderList) == Boolean.TRUE) {
 				while (tokenizer.hasMoreElements()) {
 					String url = tokenizer.nextToken();
 					// Parse the url into a host:port form, stripping any protocol
 					Name urlAsName = getNameParser("").parse(url);
 					parseNameForScheme(urlAsName, null);
 				}
-			} else {
-				// Use server in same JVM
-				naming = localServer;
+				tokenizer = new StringTokenizer(urls, ",");
 			}
+			while (tokenizer.hasMoreElements()) {
+				String url = tokenizer.nextToken();
+				// Parse the url into a host:port form, stripping any protocol
+				Name urlAsName = getNameParser("").parse(url);
+				parseNameForScheme(urlAsName, null);
+			}
+		} else {
+			// Use server in same JVM
+			naming = localServer;
 		}
 	}
 

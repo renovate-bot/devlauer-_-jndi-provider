@@ -66,19 +66,10 @@ public class LocalOnlyContextFactory implements InitialContextFactory {
 		log.debug("getInitialContext, env: {}", env);
 		String name = null;
 		Naming localServer = null;
-		if (env != null) {
-			// First try the naming property instance
-			localServer = (Naming) env.get(NamingContext.JNP_NAMING_INSTANCE);
-			if (localServer != null)
-				log.debug("Set naming from " + NamingContext.JNP_NAMING_INSTANCE);
-			name = (String) env.get(NamingContext.JNP_NAMING_INSTANCE_NAME);
-		}
+		localServer = ifEnvExistsGetLocalServerFromEnv(env);
+		name = ifEnvExistsGetNameFromEnv(env);
 		// Next try the injected naming instance
-		if (localServer == null) {
-			localServer = naming;
-			if (localServer != null)
-				log.debug("Set naming from injected value");
-		}
+		localServer = setLocalServerToInjectedNamingIfLocalServerIsNull(localServer);
 		// Next try to locate the instance by name
 		if (localServer == null && name != null) {
 			WeakReference<Naming> lswr = localServers.get(name);
@@ -108,5 +99,33 @@ public class LocalOnlyContextFactory implements InitialContextFactory {
 		if (env == null)
 			env = new Hashtable<>();
 		return new NamingContext((Hashtable<String, Object>) env, null, localServer);
+	}
+
+	private Naming setLocalServerToInjectedNamingIfLocalServerIsNull(Naming localServer) {
+		if (localServer == null) {
+			localServer = naming;
+			if (localServer != null)
+				log.debug("Set naming from injected value");
+		}
+		return localServer;
+	}
+
+	private String ifEnvExistsGetNameFromEnv(Hashtable<?, ?> env) { //NOSONAR - needed by java.naming
+		if (env != null) {
+			// First try the naming property instance
+			return (String) env.get(NamingContext.JNP_NAMING_INSTANCE_NAME);
+		}
+		return null;
+	}
+
+	private Naming ifEnvExistsGetLocalServerFromEnv(Hashtable<?, ?> env) { //NOSONAR - needed by java.naming
+		if (env != null) {
+			// First try the naming property instance
+			Naming localServer = (Naming) env.get(NamingContext.JNP_NAMING_INSTANCE);
+			if (localServer != null)
+				log.debug("Set naming from " + NamingContext.JNP_NAMING_INSTANCE);
+			return localServer;
+		}
+		return null;
 	}
 }
