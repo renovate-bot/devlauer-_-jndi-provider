@@ -1,6 +1,9 @@
 = Changelog
 
 .Unreleased
+* nothing
+
+.1.0.0 - 05.03.2023
 * forked from jnp-server
 * switched package names to new project to avoid protected names in package naming
 * remove all server functionality due to project focus on in-VM usage 

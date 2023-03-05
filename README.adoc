@@ -23,6 +23,9 @@ All functions for the usage with
 * acting as client for other jndi servers
 
 and so on are removed.
+Also all dependencies inherited from jnp-server are removed to reduce
+the dependency tree size.
+
 This is due to the focus of this fork to be used only in *test* or *standalone*
 environments (aka in JVM-process usage) without any server functionality.
 This way the code base is reduced (less possible security risks) and 
@@ -31,6 +34,15 @@ thus becomes more maintainable.
 == Simple usage
 
 If you want to use jndi-provider you have to
+
+. add this project to your dependencies:
+----
+<dependency>
+	<groupId>de.elnarion.jndi</groupId>
+	<artifactId>jndi-provider</artifactId>
+	<version>1.0.0</version>
+</dependency>
+----
 
 . create a jndi.properties file with this content in your classpath:
 ----
