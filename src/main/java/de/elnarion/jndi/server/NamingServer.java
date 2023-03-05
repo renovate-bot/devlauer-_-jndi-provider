@@ -46,6 +46,7 @@ import javax.naming.event.NamingListener;
 import javax.naming.spi.ResolveResult;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -140,8 +141,7 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 		}
 	}
 
-	private void findRightContextAndBind(Name name, Object obj, String className)
-			throws NamingException {
+	private void findRightContextAndBind(Name name, Object obj, String className) throws NamingException {
 		Object ctx = getObject(name);
 		if (ctx != null) {
 			if (ctx instanceof NamingServer) {
@@ -149,19 +149,28 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 				ns.bind(name.getSuffix(1), obj, className);
 			} else if (ctx instanceof Reference) {
 				// Federation
-				if (((Reference) ctx).get("nns") != null) {
-					CannotProceedException cpe = new CannotProceedException();
-					cpe.setResolvedObj(ctx);
-					cpe.setRemainingName(name.getSuffix(1));
-					throw cpe;
-				} else {
-					throw new NotContextException();
-				}
+				throwSpecificExceptionsForReference(name, ctx);
 			} else {
 				throw new NotContextException();
 			}
 		} else {
 			throw new NameNotFoundException(name.toString() + " in: " + prefix);
+		}
+	}
+
+	private void throwSpecificExceptionsForReference(Name name, Object ctx)
+			throws CannotProceedException, NotContextException {
+		createAndThrowCanNotProceedExceptionForNnsReference(name, ctx);
+		throw new NotContextException();
+	}
+
+	private void createAndThrowCanNotProceedExceptionForNnsReference(Name name, Object ctx)
+			throws CannotProceedException {
+		if (((Reference) ctx).get("nns") != null) {
+			CannotProceedException cpe = new CannotProceedException();
+			cpe.setResolvedObj(ctx);
+			cpe.setRemainingName(name.getSuffix(1));
+			throw cpe;
 		}
 	}
 
@@ -221,21 +230,12 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 		}
 	}
 
-	private void rebindName(Name name, Object obj, String className)
-			throws NamingException{
+	private void rebindName(Name name, Object obj, String className) throws NamingException {
 		Object ctx = getObject(name);
 		if (ctx instanceof NamingServer) {
 			((NamingServer) ctx).rebind(name.getSuffix(1), obj, className);
 		} else if (ctx instanceof Reference) {
-			// Federation
-			if (((Reference) ctx).get("nns") != null) {
-				CannotProceedException cpe = new CannotProceedException();
-				cpe.setResolvedObj(ctx);
-				cpe.setRemainingName(name.getSuffix(1));
-				throw cpe;
-			} else {
-				throw new NotContextException();
-			}
+			throwSpecificExceptionsForReference(name, ctx);
 		} else {
 			throw new NotContextException();
 		}
@@ -251,15 +251,7 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 			if (ctx instanceof NamingServer) {
 				((NamingServer) ctx).unbind(name.getSuffix(1));
 			} else if (ctx instanceof Reference) {
-				// Federation
-				if (((Reference) ctx).get("nns") != null) {
-					CannotProceedException cpe = new CannotProceedException();
-					cpe.setResolvedObj(ctx);
-					cpe.setRemainingName(name.getSuffix(1));
-					throw cpe;
-				} else {
-					throw new NotContextException();
-				}
+				throwSpecificExceptionsForReference(name, ctx);
 			} else {
 				throw new NotContextException();
 			}
@@ -315,13 +307,7 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 		if (ctx instanceof NamingServer) {
 			return ((NamingServer) ctx).lookup(name.getSuffix(1));
 		} else if (ctx instanceof Reference) {
-			// Federation
-			if (((Reference) ctx).get("nns") != null) {
-				CannotProceedException cpe = new CannotProceedException();
-				cpe.setResolvedObj(ctx);
-				cpe.setRemainingName(name.getSuffix(1));
-				throw cpe;
-			}
+			createAndThrowCanNotProceedExceptionForNnsReference(name, ctx);
 			return new ResolveResult(ctx, name.getSuffix(1));
 		} else {
 			throw new NotContextException();
@@ -341,15 +327,9 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 			if (ctx instanceof NamingServer) {
 				return ((NamingServer) ctx).list(name.getSuffix(1));
 			} else if (ctx instanceof Reference) {
-				// Federation
-				if (((Reference) ctx).get("nns") != null) {
-					CannotProceedException cpe = new CannotProceedException();
-					cpe.setResolvedObj(ctx);
-					cpe.setRemainingName(name.getSuffix(1));
-					throw cpe;
-				} else {
-					throw new NotContextException();
-				}
+				throwSpecificExceptionsForReference(name, ctx);
+				// never reached
+				return Collections.emptyList();
 			} else {
 				throw new NotContextException();
 			}
@@ -364,15 +344,9 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 			if (ctx instanceof NamingServer) {
 				return ((NamingServer) ctx).listBindings(name.getSuffix(1));
 			} else if (ctx instanceof Reference) {
-				// Federation
-				if (((Reference) ctx).get("nns") != null) {
-					CannotProceedException cpe = new CannotProceedException();
-					cpe.setResolvedObj(ctx);
-					cpe.setRemainingName(name.getSuffix(1));
-					throw cpe;
-				} else {
-					throw new NotContextException();
-				}
+				throwSpecificExceptionsForReference(name, ctx);
+				// never reached because of exception from throw...
+				return Collections.emptyList();
 			} else {
 				throw new NotContextException();
 			}
@@ -437,23 +411,14 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 				return ((NamingServer) ctx).createSubcontext(subCtxName);
 			} else if (ctx instanceof Reference) {
 				// Federation
-				if (((Reference) ctx).get("nns") != null) {
-					CannotProceedException cpe = new CannotProceedException();
-					cpe.setResolvedObj(ctx);
-					cpe.setRemainingName(subCtxName);
-					throw cpe;
-				} else {
-					ex = new NotContextException();
-					ex.setResolvedName(name.getPrefix(0));
-					ex.setRemainingName(subCtxName);
-					throw ex;
-				}
-			} else {
-				ex = new NotContextException();
-				ex.setResolvedName(name.getPrefix(0));
-				ex.setRemainingName(subCtxName);
-				throw ex;
+				createAndThrowCanNotProceedExceptionForNnsReference(name, ctx);
 			}
+			// all other cases
+			ex = new NotContextException();
+			ex.setResolvedName(name.getPrefix(0));
+			ex.setRemainingName(subCtxName);
+			throw ex;
+
 		} else {
 			ex = new NameNotFoundException();
 			ex.setRemainingName(name);
