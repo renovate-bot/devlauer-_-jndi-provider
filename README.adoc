@@ -1,0 +1,77 @@
+= jndi-provider project
+
+image:https://sonarcloud.io/api/project_badges/measure?project=devlauer_jndi-provider&metric=ncloc["Lines of Code", link="https://sonarcloud.io/summary/new_code?id=devlauer_jndi-provider"]
+image:https://sonarcloud.io/api/project_badges/measure?project=devlauer_jndi-provider&metric=security_rating["Security Rating", link="https://sonarcloud.io/summary/new_code?id=devlauer_jndi-provider"]
+image:https://sonarcloud.io/api/project_badges/measure?project=devlauer_jndi-provider&metric=vulnerabilities["Vulnerabilities", link="https://sonarcloud.io/summary/new_code?id=devlauer_jndi-provider"]
+image:https://sonarcloud.io/api/project_badges/measure?project=devlauer_jndi-provider&metric=sqale_rating["Maintainability Rating", link="https://sonarcloud.io/summary/new_code?id=devlauer_jndi-provider"]
+image:https://sonarcloud.io/api/project_badges/measure?project=devlauer_jndi-provider&metric=coverage["Coverage", link="https://sonarcloud.io/summary/new_code?id=devlauer_jndi-provider"]
+image:https://github.com/devlauer/jndi-provider/actions/workflows/verify.yml/badge.svg["mvn verify"]
+
+== Description 
+
+jndi-provider is a fork of the original 
+link:https://anonsvn.jboss.org/repos/jbossas/projects/naming/trunk/[JBoss JNPServer Project]
+in the version 5.1.0-SNAPSHOT because this project is not maintained anymore.
+
+This fork is reduced to its functionality inside a JVM process.
+
+All functions for the usage with 
+
+* remote registries, 
+* starting as a standalone server process with port and ip binding
+* creating a high availibility cluster with other instances
+* acting as client for other jndi servers
+
+and so on are removed.
+This is due to the focus of this fork to be used only in *test* or *standalone*
+environments (aka in JVM-process usage) without any server functionality.
+This way the code base is reduced (less possible security risks) and 
+thus becomes more maintainable.
+
+== Simple usage
+
+If you want to use jndi-provider you have to
+
+. create a jndi.properties file with this content in your classpath:
+----
+java.naming.factory.initial=de.elnarion.jndi.interfaces.NamingContextFactory
+java.naming.factory.url.pkgs=de.elnarion.jndi.interfaces
+----
+. start the JNDI-Provider inside your java program:
+[source,java]
+----
+NamingBeanImpl naming = new NamingBeanImpl();
+naming.start();
+----
+. stop the JNDI-Provider after your usage is finished:
+[source,java]
+----
+naming.stop();
+----
+
+There are more other types of usages which can be found in the 
+Unit test cases.
+
+== Licensing
+
+This software is licensed under the https://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html[GNU LESSER GENERAL PUBLIC LICENSE, Version 2.1]. 
+Note that using jndi-provider comes without any (legal) warranties.
+
+== Versioning
+
+This project uses sematic versioning. 
+For more information refer to http://semver.org/[semver].
+
+== Changelog
+
+This plugin has a dedicated 
+link:https://github.com/devlauer/jndi-provider/blob/master/Changelog.adoc[Changelog].
+
+== Reporting bugs and feature requests
+
+Use GitHub issues to create your issues.
+
+== Source
+
+Latest and greatest source of jndi-provider can be found on 
+https://github.com/devlauer/jndi-provider[GitHub]. Fork it!
