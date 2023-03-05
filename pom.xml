@@ -11,13 +11,13 @@
 	<packaging>jar</packaging>
 	<name>${project.groupId}:${project.artifactId}</name>
 	<description>A fork of JBoss JNPServer because it is not maintained anymore</description>
-	<url>https://github.com/devlauer/elnarion-parent-pom</url>
+	<url>https://github.com/devlauer/jndi-provider</url>
 	<properties>
 		<java.version>8</java.version>
 	</properties>
 	<issueManagement>
 		<system>github</system>
-		<url>https://github.com/devlauer/naming-server/issues</url>
+		<url>https://github.com/devlauer/jndi-provider/issues</url>
 	</issueManagement>
 	<licenses>
 		<license>
@@ -188,9 +188,9 @@
 		</plugins>
 	</build>
 	<scm>
-		<url>http://github.com/devlauer/naming-server</url>
-		<connection>scm:git:git@github.com:devlauer/naming-server.git</connection>
-		<developerConnection>scm:git:git@github.com:devlauer/naming-server.git</developerConnection>
+		<url>http://github.com/devlauer/jndi-provider</url>
+		<connection>scm:git:git@github.com:devlauer/jndi-provider.git</connection>
+		<developerConnection>scm:git:git@github.com:devlauer/jndi-provider.git</developerConnection>
 		<tag>HEAD</tag>
 	</scm>
 </project>
