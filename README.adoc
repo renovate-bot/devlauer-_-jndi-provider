@@ -35,7 +35,8 @@ thus becomes more maintainable.
 
 If you want to use jndi-provider you have to
 
-. add this project to your dependencies:
+. add this project to your dependencies: 
++
 ----
 <dependency>
 	<groupId>de.elnarion.jndi</groupId>
@@ -43,19 +44,21 @@ If you want to use jndi-provider you have to
 	<version>1.0.0</version>
 </dependency>
 ----
-
-. create a jndi.properties file with this content in your classpath:
+. create a jndi.properties file with this content in your classpath: 
++
 ----
 java.naming.factory.initial=de.elnarion.jndi.interfaces.NamingContextFactory
 java.naming.factory.url.pkgs=de.elnarion.jndi.interfaces
 ----
-. start the JNDI-Provider inside your java program:
+. start the JNDI-Provider inside your java program: 
++
 [source,java]
 ----
 NamingBeanImpl naming = new NamingBeanImpl();
 naming.start();
 ----
-. stop the JNDI-Provider after your usage is finished:
+. stop the JNDI-Provider after your usage is finished: 
++
 [source,java]
 ----
 naming.stop();
@@ -63,6 +66,7 @@ naming.stop();
 
 There are more other types of usages which can be found in the 
 Unit test cases.
+This is only the common one.
 
 == Licensing
 
