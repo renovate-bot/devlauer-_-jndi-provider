@@ -4,7 +4,7 @@
 	],
 	"packageRules": [
 		{
-			"matchPackagePatterns": ["^slf4j-"],
+			"matchPackagePatterns": ["^org.slf4j"],
 			"matchUpdateTypes": ["major"],
 			"enabled": false
 		}
