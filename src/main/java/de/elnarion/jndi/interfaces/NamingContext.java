@@ -87,13 +87,6 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 */
 	public static final String JNP_USE_RELATIVE_NAME = "jnp.useRelativeName";
 	/**
-	 * An integer that controls the number of connection retry attempts will be made
-	 * on the initial connection to the naming server. This only applies to
-	 * ConnectException failures. A value <= 1 means that only one attempt will be
-	 * made.
-	 */
-	public static final String JNP_MAX_RETRIES = "jnp.maxRetries";
-	/**
 	 * The Naming instance to use for the root Context creation
 	 */
 	public static final String JNP_NAMING_INSTANCE = "jnp.namingInstance";
