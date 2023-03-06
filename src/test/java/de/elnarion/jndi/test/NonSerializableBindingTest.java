@@ -3,7 +3,6 @@ package de.elnarion.jndi.test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import javax.naming.InitialContext;
-import javax.naming.LinkRef;
 import javax.naming.NamingException;
 
 import org.junit.jupiter.api.Test;
