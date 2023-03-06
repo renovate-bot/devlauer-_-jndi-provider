@@ -22,7 +22,6 @@
 package de.elnarion.jndi.interfaces;
 
 import java.io.IOException;
-import java.rmi.MarshalledObject;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
@@ -251,7 +250,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 			if (!(obj instanceof Reference)) {
 				if (obj != null)
 					className = obj.getClass().getName();
-				obj = createMarshalledValuePair(obj);
+				obj = createValuePair(obj);
 			} else {
 				className = ((Reference) obj).getClassName();
 			}
@@ -294,8 +293,8 @@ public class NamingContext implements EventContext, java.io.Serializable {
 				if (obj != null)
 					className = obj.getClass().getName();
 
-				// Normal object - serialize using a MarshalledValuePair
-				obj = createMarshalledValuePair(obj);
+				// Normal object - serialize using a ValueWrapper
+				obj = createValuePair(obj);
 			} else {
 				className = ((Reference) obj).getClassName();
 			}
@@ -354,13 +353,10 @@ public class NamingContext implements EventContext, java.io.Serializable {
 
 	private Object getLookupObjectFromResource(Object res, Hashtable<String, Object> refEnv, Name name)
 			throws ClassNotFoundException, IOException, NamingException {
-		if (res instanceof MarshalledValuePair) {
-			MarshalledValuePair mvp = (MarshalledValuePair) res;
+		if (res instanceof ValueWrapper) {
+			ValueWrapper mvp = (ValueWrapper) res;
 			Object storedObj = mvp.get();
 			return getObjectInstanceWrapFailure(storedObj, name, refEnv);
-		} else if (res instanceof MarshalledObject) {
-			MarshalledObject<?> mo = (MarshalledObject<?>) res;
-			return mo.get();
 		} else if (res instanceof Context) {
 			// Add env
 			Enumeration<String> keys = refEnv.keys();
@@ -487,15 +483,13 @@ public class NamingContext implements EventContext, java.io.Serializable {
 			bindings = naming.listBindings(getAbsoluteName(name));
 			Collection<Binding> realBindings = new ArrayList<>(bindings.size());
 
-			// Convert marshalled objects
+			// Convert objects
 			Iterator<?> i = bindings.iterator();
 			while (i.hasNext()) {
 				Binding binding = (Binding) i.next();
 				Object obj = binding.getObject();
-				if (obj instanceof MarshalledValuePair) {
+				if (obj instanceof ValueWrapper) {
 					obj = extracted(obj);
-				} else if (obj instanceof MarshalledObject) {
-					obj = ((MarshalledObject<?>) obj).get();
 				}
 				realBindings.add(new Binding(binding.getName(), binding.getClassName(), obj));
 			}
@@ -506,7 +500,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 			cpe.setEnvironment(refEnv);
 			Context cctx = NamingManager.getContinuationContext(cpe);
 			return cctx.listBindings(cpe.getRemainingName());
-		} catch (IOException | ClassNotFoundException e) {
+		} catch (IOException e) {
 			naming = null;
 			removeServer(refEnv);
 			NamingException ex = new CommunicationException();
@@ -516,14 +510,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	}
 
 	private Object extracted(Object obj) throws IOException, NamingException {
-		try {
-			obj = ((MarshalledValuePair) obj).get();
-		} catch (ClassNotFoundException e) {
-			NamingException ex = new CommunicationException();
-			ex.setRootCause(e);
-			throw ex;
-		}
-		return obj;
+		return ((ValueWrapper) obj).get();
 	}
 
 	public String composeName(String name, String prefix) throws NamingException {
@@ -725,17 +712,17 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	// Private -------------------------------------------------------
 
 	/**
-	 * Isolate the creation of the MarshalledValuePair in a privileged block when
-	 * running under a security manager so the following permissions can be isolated
-	 * from the caller: RuntimePermission("createClassLoader")
+	 * Isolate the creation of the ValueWrapper in a privileged block when running
+	 * under a security manager so the following permissions can be isolated from
+	 * the caller: RuntimePermission("createClassLoader")
 	 * ReflectPermission("suppressAccessChecks")
 	 * SerializablePermission("enableSubstitution")
 	 * 
-	 * @return the MarshalledValuePair wrapping obj
+	 * @return the ValueWrapper wrapping obj
 	 */
-	private Object createMarshalledValuePair(final Object obj) throws IOException {
-		MarshalledValuePair mvp = null;
-		mvp = new MarshalledValuePair(obj);
+	private Object createValuePair(final Object obj) throws IOException {
+		ValueWrapper mvp = null;
+		mvp = new ValueWrapper(obj);
 		return mvp;
 	}
 

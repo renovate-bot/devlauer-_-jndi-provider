@@ -49,11 +49,6 @@ import de.elnarion.jndi.server.SingletonNamingServer;
  */
 class MissingObjectFactoryBindingTest {
 
-	// -------------------------------------------------------------------------------------||
-	// Class Members
-	// ----------------------------------------------------------------------||
-	// -------------------------------------------------------------------------------------||
-
 	/**
 	 * Logger
 	 */
@@ -63,16 +58,6 @@ class MissingObjectFactoryBindingTest {
 	 * Naming Context for bind/lookup
 	 */
 	private static Context namingContext;
-
-	// -------------------------------------------------------------------------------------||
-	// Instance Members
-	// -------------------------------------------------------------------||
-	// -------------------------------------------------------------------------------------||
-
-	// -------------------------------------------------------------------------------------||
-	// Lifecycle
-	// --------------------------------------------------------------------------||
-	// -------------------------------------------------------------------------------------||
 
 	/**
 	 * Creates the new server
@@ -85,11 +70,6 @@ class MissingObjectFactoryBindingTest {
 		// Create a naming context
 		namingContext = new InitialContext();
 	}
-
-	// -------------------------------------------------------------------------------------||
-	// Tests
-	// ------------------------------------------------------------------------------||
-	// -------------------------------------------------------------------------------------||
 
 	/**
 	 * Control; ensures that we can bind into JNDI and look up a value via an
@@ -142,11 +122,6 @@ class MissingObjectFactoryBindingTest {
 		// If we've reached here, no good, we should have gotten an exception
 	}
 
-	// -------------------------------------------------------------------------------------||
-	// Internal Helper Methods
-	// ------------------------------------------------------------||
-	// -------------------------------------------------------------------------------------||
-
 	/**
 	 * Binds an {@link ObjectFactory} with the specified class name into JNDI at the
 	 * specified location
@@ -156,11 +131,6 @@ class MissingObjectFactoryBindingTest {
 																								// important
 		namingContext.bind(location, ref);
 	}
-
-	// -------------------------------------------------------------------------------------||
-	// Internal Helper Classes
-	// ------------------------------------------------------------||
-	// -------------------------------------------------------------------------------------||
 
 	/**
 	 * {@link ObjectFactory} implementation to always return the same contracted

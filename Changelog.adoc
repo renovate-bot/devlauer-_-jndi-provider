@@ -3,6 +3,10 @@
 .Unreleased
 * nothing
 
+.1.1.0 - 06.03.2023
+* allow non serializable objects to bind
+(possible because of in memory/in process usage)
+
 .1.0.0 - 05.03.2023
 * forked from jnp-server
 * switched package names to new project to avoid protected names in package naming

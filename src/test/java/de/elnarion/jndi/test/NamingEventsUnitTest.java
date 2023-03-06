@@ -41,7 +41,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.elnarion.jndi.interfaces.MarshalledValuePair;
+import de.elnarion.jndi.interfaces.ValueWrapper;
 import de.elnarion.jndi.server.ExecutorEventMgr;
 import de.elnarion.jndi.server.NamingBeanImpl;
 import de.elnarion.jndi.test.support.QueueEventListener;
@@ -168,8 +168,8 @@ class NamingEventsUnitTest {
 
 	protected Object getValue(Binding binding) throws ClassNotFoundException, IOException {
 		Object obj = binding.getObject();
-		if (obj instanceof MarshalledValuePair) {
-			MarshalledValuePair mvp = (MarshalledValuePair) obj;
+		if (obj instanceof ValueWrapper) {
+			ValueWrapper mvp = (ValueWrapper) obj;
 			obj = mvp.get();
 		}
 		return obj;
