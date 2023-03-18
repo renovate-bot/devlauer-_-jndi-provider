@@ -25,6 +25,7 @@ import de.elnarion.jndi.interfaces.ValueWrapper;
 import de.elnarion.jndi.server.ExecutorEventMgr;
 import de.elnarion.jndi.server.NamingBeanImpl;
 import de.elnarion.jndi.test.support.QueueEventListener;
+import net.jcip.annotations.NotThreadSafe;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,7 +39,6 @@ import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.event.EventContext;
 import javax.naming.event.NamingEvent;
-import java.io.IOException;
 import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -46,12 +46,13 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * @author Scott.Stark@jboss.org
  */
+@NotThreadSafe
 @Execution(ExecutionMode.SAME_THREAD)
 class NamingEventsUnitTest {
 	private static final Logger LOGGER = LoggerFactory.getLogger(NamingEventsUnitTest.class);
+	private final QueueEventListener listener = new QueueEventListener();
 	/** The actual namingMain service impl bean */
 	private NamingBeanImpl namingBean;
-	private QueueEventListener listener = new QueueEventListener();
 
 	@BeforeEach
 	void setUp() throws Exception {
@@ -62,7 +63,7 @@ class NamingEventsUnitTest {
 	}
 
 	@AfterEach
-	void tearDown() throws Exception {
+	void tearDown() {
 		namingBean.stop();
 	}
 
@@ -168,7 +169,7 @@ class NamingEventsUnitTest {
 		LOGGER.info("Leaving AddRemoveSubtree");
 	}
 
-	protected Object getValue(Binding binding) throws ClassNotFoundException, IOException {
+	protected Object getValue(Binding binding) {
 		Object obj = binding.getObject();
 		if (obj instanceof ValueWrapper) {
 			ValueWrapper mvp = (ValueWrapper) obj;
