@@ -78,7 +78,6 @@ class NamingEventsSubtreeUnitTest {
 		ectx.addNamingListener("", EventContext.SUBTREE_SCOPE, listener);
 		LOGGER.info("Added NamingListener");
 		ctx.bind("testAddObject", "testAddObject.bind");
-		LOGGER.info("Object bound");
 		assertTrue(listener.waitOnEvent(2, TimeUnit.SECONDS), "Saw bind event");
 		NamingEvent event = listener.getEvent(0);
 		assertEquals(NamingEvent.OBJECT_ADDED, event.getType(), "OBJECT_ADDED");
