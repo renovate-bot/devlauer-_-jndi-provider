@@ -1,73 +1,57 @@
 /*
-  * JBoss, Home of Professional Open Source
-  * Copyright 2005, JBoss Inc., and individual contributors as indicated
-  * by the @authors tag. See the copyright.txt in the distribution for a
-  * full listing of individual contributors.
-  *
-  * This is free software; you can redistribute it and/or modify it
-  * under the terms of the GNU Lesser General Public License as
-  * published by the Free Software Foundation; either version 2.1 of
-  * the License, or (at your option) any later version.
-  *
-  * This software is distributed in the hope that it will be useful,
-  * but WITHOUT ANY WARRANTY; without even the implied warranty of
-  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-  * Lesser General Public License for more details.
-  *
-  * You should have received a copy of the GNU Lesser General Public
-  * License along with this software; if not, write to the Free
-  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
-  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
-  */
+ * JBoss, Home of Professional Open Source
+ * Copyright 2005, JBoss Inc., and individual contributors as indicated
+ * by the @authors tag. See the copyright.txt in the distribution for a
+ * full listing of individual contributors.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
 package de.elnarion.jndi.server;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import de.elnarion.jndi.interfaces.Naming;
 import de.elnarion.jndi.interfaces.NamingContext;
 import de.elnarion.jndi.interfaces.NamingEvents;
 import de.elnarion.jndi.interfaces.NamingParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import javax.naming.Binding;
-import javax.naming.CannotProceedException;
-import javax.naming.Context;
-import javax.naming.InvalidNameException;
-import javax.naming.Name;
-import javax.naming.NameAlreadyBoundException;
-import javax.naming.NameClassPair;
-import javax.naming.NameNotFoundException;
-import javax.naming.NamingException;
-import javax.naming.NotContextException;
-import javax.naming.Reference;
+import javax.naming.*;
 import javax.naming.event.EventContext;
 import javax.naming.event.NamingEvent;
 import javax.naming.event.NamingListener;
 import javax.naming.spi.ResolveResult;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The in memory JNDI naming server implementation class.
- * 
+ *
  * @author Rickard Oberg
  * @author patriot1burke
  * @author Scott.Stark@jboss.org
  */
 public class NamingServer implements Naming, NamingEvents, java.io.Serializable {
-	private static Logger log = LoggerFactory.getLogger(NamingServer.class);
-
 	/** @since 1.12 at least */
 	private static final long serialVersionUID = 4183855539507934373L;
+	private static final Logger LOGGER = LoggerFactory.getLogger(NamingServer.class);
 	// Constants -----------------------------------------------------
 
 	// Attributes ----------------------------------------------------
-	/** */
+	private final transient boolean debug;
+	/**  */
 	protected transient Map<String, Binding> table = createTable();
 	protected Name prefix;
 	protected NamingParser parser = new NamingParser();
@@ -76,7 +60,6 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 	private transient EventListeners listeners;
 	/** The manager for EventContext listeners */
 	private transient EventMgr eventMgr;
-	private transient boolean debug;
 
 	// Static --------------------------------------------------------
 
@@ -96,7 +79,7 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 		this.prefix = prefix;
 		this.parent = parent;
 		this.eventMgr = eventMgr;
-		this.debug = log.isDebugEnabled();
+		this.debug = LOGGER.isDebugEnabled();
 	}
 
 	// Public --------------------------------------------------------
@@ -107,11 +90,11 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 		if (listeners == null)
 			listeners = new EventListeners(context);
 		if (debug)
-			log.debug("addNamingListener, target: {}, scope: {}", target, scope);
+			LOGGER.debug("addNamingListener, target: {}, scope: {}", target, scope);
 		listeners.addNamingListener(context, target, scope, l);
 	}
 
-	public void removeNamingListener(NamingListener l) throws NamingException {
+	public void removeNamingListener(NamingListener l) {
 		if (listeners != null) {
 			listeners.removeNamingListener(l);
 		}
@@ -119,11 +102,10 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 
 	/**
 	 * We don't need targets to exist?
-	 * 
+	 *
 	 * @return false
-	 * @throws NamingException
 	 */
-	public boolean targetMustExist() throws NamingException {
+	public boolean targetMustExist() {
 		return false;
 	}
 
@@ -180,7 +162,7 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 			throw new InvalidNameException("An empty name cannot be passed to bind");
 		} else {
 			if (debug)
-				log.debug("bind {}={}, {}", name, obj, className);
+				LOGGER.debug("bind {}={}, {}", name, obj, className);
 			try {
 				getBinding(name);
 				// Already bound
@@ -373,8 +355,8 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 		if (name.size() == 0)
 			throw new InvalidNameException("Cannot pass an empty name to createSubcontext");
 
-		NamingException ex = null;
-		Context subCtx = null;
+		NamingException ex;
+		Context subCtx;
 		if (name.size() > 1) {
 			subCtx = createFurtherSubcontexts(name);
 		} else {
@@ -458,20 +440,20 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 	protected void fireEvent(Name fullName, Binding oldb, Binding newb, int type, String changeInfo) {
 		if (eventMgr == null) {
 			if (debug)
-				log.debug("Skipping event dispatch because there is no EventMgr");
+				LOGGER.debug("Skipping event dispatch because there is no EventMgr");
 			return;
 		}
 
 		if (listeners != null) {
 			if (debug)
-				log.debug("fireEvent, type: {}, fullName: {}", type, fullName);
+				LOGGER.debug("fireEvent, type: {}, fullName: {}", type, fullName);
 			HashSet<Integer> scopes = new HashSet<>();
 			scopes.add(EventContext.OBJECT_SCOPE);
 			scopes.add(EventContext.ONELEVEL_SCOPE);
 			scopes.add(EventContext.SUBTREE_SCOPE);
 			eventMgr.fireEvent(fullName, oldb, newb, type, changeInfo, listeners, scopes);
 		} else if (debug) {
-			log.debug("fireEvent, type: {}, fullName: {}", type, fullName);
+			LOGGER.debug("fireEvent, type: {}, fullName: {}", type, fullName);
 		}
 		// Traverse to parent for SUBTREE_SCOPE
 		HashSet<Integer> scopes = new HashSet<>();
@@ -499,8 +481,8 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 			tmp.append(obj);
 			tmp.append(", className=");
 			tmp.append(className);
-			if (log.isDebugEnabled())
-				log.debug(tmp.toString());
+			if (LOGGER.isDebugEnabled())
+				LOGGER.debug(tmp.toString());
 		}
 		return b;
 	}
@@ -508,16 +490,15 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 	private Binding getBinding(String key) throws NameNotFoundException {
 		Binding b = table.get(key);
 		if (b == null) {
-			if (log.isDebugEnabled()) {
+			if (LOGGER.isDebugEnabled()) {
 				StringBuilder tmp = new StringBuilder(super.toString());
 				tmp.append(", No binding for: ");
 				tmp.append(key);
 				tmp.append(" in context ");
 				tmp.append(this.prefix);
 				tmp.append(", bindings:\n");
-				Iterator<Binding> bindings = table.values().iterator();
-				while (bindings.hasNext()) {
-					Binding value = bindings.next();
+				Collection<Binding> bindings = table.values();
+				for (Binding value : bindings) {
 					tmp.append(value.getName());
 					tmp.append('=');
 					if (value.getObject() != null)
@@ -526,7 +507,7 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 						tmp.append("null");
 					tmp.append('\n');
 				}
-				log.debug(tmp.toString());
+				LOGGER.debug(tmp.toString());
 			}
 			throw new NameNotFoundException(key + " not bound in " + prefix);
 		}
@@ -545,4 +526,11 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 		return table.remove(name.get(0));
 	}
 
+	protected synchronized EventMgr getEventMgr() {
+		return this.eventMgr;
+	}
+
+	protected synchronized void setEventMgr(EventMgr paramEventMgr) {
+		this.eventMgr = paramEventMgr;
+	}
 }

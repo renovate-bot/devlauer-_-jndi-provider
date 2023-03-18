@@ -21,30 +21,23 @@
  */
 package de.elnarion.jndi.server;
 
-import java.util.Hashtable;
-import java.util.Map.Entry;
-
-import javax.naming.Context;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
-import javax.naming.RefAddr;
-import javax.naming.Reference;
-import javax.naming.StringRefAddr;
-
+import de.elnarion.jndi.interfaces.Naming;
+import de.elnarion.jndi.interfaces.NamingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.elnarion.jndi.interfaces.Naming;
-import de.elnarion.jndi.interfaces.NamingContext;
+import javax.naming.*;
+import java.util.Hashtable;
+import java.util.Map.Entry;
 
 /**
  * A naming pojo that wraps the Naming server implementation. This is a
  * refactoring of the legacy de.elnarion.jndi.server.Main into a
- * 
+ *
  * @author Scott.Stark@jboss.org
  */
 public class NamingBeanImpl implements NamingBean {
-	private static Logger log = LoggerFactory.getLogger(NamingBeanImpl.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(NamingBeanImpl.class);
 	// Attributes ----------------------------------------------------
 	/** The Naming interface server implementation */
 	protected Naming theServer;
@@ -120,25 +113,7 @@ public class NamingBeanImpl implements NamingBean {
 	 */
 	public void start() throws NamingException {
 		// Create the local naming service instance if it does not exist
-		if (theServer == null) {
-			// See if we should try to reuse the current local server
-			if (useGlobalService )
-				theServer = NamingContext.getLocal();
-			// If not, or there is no server create one
-			if (theServer == null)
-				theServer = createServer();
-			else {
-				// We need to wrap the server to allow exporting it
-				NamingServerWrapper wrapper = new NamingServerWrapper(theServer);
-				theServer = wrapper;
-			}
-			log.debug("Using NamingServer: {}",theServer);
-			if (installGlobalService) {
-				// Set local server reference
-				NamingContext.setLocal(theServer);
-				log.debug("Installed global NamingServer: {}", theServer);
-			}
-		}
+		createLocalNamingServerInstanceIfDoesNotExist();
 
 		/*
 		 * Create a default InitialContext and dump out its env to show what properties
@@ -147,19 +122,19 @@ public class NamingBeanImpl implements NamingBean {
 		 */
 		InitialContext iniCtx = new InitialContext();
 		Hashtable<?, ?> env = iniCtx.getEnvironment();
-		log.debug("InitialContext Environment: ");
+		LOGGER.debug("InitialContext Environment: ");
 		Object providerURL = null;
-		for (Entry<?, ?> entry : env.entrySet())  {
+		for (Entry<?, ?> entry : env.entrySet()) {
 			Object value = entry.getValue();
 			Object key = entry.getKey();
 			String type = value == null ? "" : value.getClass().getName();
-			log.debug("key={}, value({})={}", key  , type  , value);
+			LOGGER.debug("key={}, value({})={}", key, type, value);
 			if (key.equals(Context.PROVIDER_URL))
 				providerURL = value;
 		}
 		// Warn if there was a Context.PROVIDER_URL
 		if (providerURL != null)
-			log.warn("Context.PROVIDER_URL in server jndi.properties, url={}", providerURL);
+			LOGGER.warn("Context.PROVIDER_URL in server jndi.properties, url={}", providerURL);
 
 		if (installJavaComp) {
 			/*
@@ -176,6 +151,32 @@ public class NamingBeanImpl implements NamingBean {
 			ctx.close();
 		}
 		iniCtx.close();
+	}
+
+	private void createLocalNamingServerInstanceIfDoesNotExist() throws NamingException {
+		if (theServer == null) {
+			// See if we should try to reuse the current local server
+			if (useGlobalService)
+				theServer = NamingContext.getLocal();
+			// If not, or there is no server create one
+			if (theServer == null)
+				theServer = createServer();
+			else if (theServer instanceof NamingServer) {
+				EventMgr currentEventMgr = ((NamingServer) theServer).getEventMgr();
+				if (currentEventMgr == null || !currentEventMgr.equals(eventMgr)) {
+					((NamingServer) theServer).setEventMgr(eventMgr);
+				}
+			} else {
+				// We need to wrap the server to allow exporting it
+				theServer = new NamingServerWrapper(theServer);
+			}
+			LOGGER.debug("Using NamingServer: {}", theServer);
+			if (installGlobalService) {
+				// Set local server reference
+				NamingContext.setLocal(theServer);
+				LOGGER.debug("Installed global NamingServer: {}", theServer);
+			}
+		}
 	}
 
 	/**
