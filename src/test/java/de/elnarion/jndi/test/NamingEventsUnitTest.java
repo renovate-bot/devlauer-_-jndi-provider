@@ -26,9 +26,7 @@ import de.elnarion.jndi.server.ExecutorEventMgr;
 import de.elnarion.jndi.server.NamingBeanImpl;
 import de.elnarion.jndi.test.support.QueueEventListener;
 import net.jcip.annotations.NotThreadSafe;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.slf4j.Logger;
@@ -48,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @NotThreadSafe
 @Execution(ExecutionMode.SAME_THREAD)
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class NamingEventsUnitTest {
 	private static final Logger LOGGER = LoggerFactory.getLogger(NamingEventsUnitTest.class);
 	private final QueueEventListener listener = new QueueEventListener();
@@ -68,6 +67,7 @@ class NamingEventsUnitTest {
 	}
 
 	@Test
+	@Order(1)
 	void testAddRemoveOneLevel() throws Exception {
 		LOGGER.info("Entering AddRemoveOneLevel");
 		Properties env = new Properties();
@@ -118,6 +118,7 @@ class NamingEventsUnitTest {
 	}
 
 	@Test
+	@Order(2)
 	void testAddRemoveSubtree() throws Exception {
 		LOGGER.info("Entering AddRemoveSubtree");
 		Properties env = new Properties();
