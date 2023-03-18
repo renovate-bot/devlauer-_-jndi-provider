@@ -21,34 +21,31 @@
  */
 package de.elnarion.jndi.test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.io.IOException;
-import java.util.Properties;
+import de.elnarion.jndi.interfaces.ValueWrapper;
+import de.elnarion.jndi.server.ExecutorEventMgr;
+import de.elnarion.jndi.server.NamingBeanImpl;
+import de.elnarion.jndi.test.support.QueueEventListener;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.naming.Binding;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.event.EventContext;
 import javax.naming.event.NamingEvent;
+import java.io.IOException;
+import java.util.Properties;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import de.elnarion.jndi.interfaces.ValueWrapper;
-import de.elnarion.jndi.server.ExecutorEventMgr;
-import de.elnarion.jndi.server.NamingBeanImpl;
-import de.elnarion.jndi.test.support.QueueEventListener;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Scott.Stark@jboss.org
  */
+@Isolated
 class NamingEventsUnitTest {
 	private static final Logger LOGGER = LoggerFactory.getLogger(NamingEventsUnitTest.class);
 	/** The actual namingMain service impl bean */
