@@ -28,7 +28,8 @@ import de.elnarion.jndi.test.support.QueueEventListener;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.parallel.Isolated;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * @author Scott.Stark@jboss.org
  */
-@Isolated
+@Execution(ExecutionMode.SAME_THREAD)
 class NamingEventsUnitTest {
 	private static final Logger LOGGER = LoggerFactory.getLogger(NamingEventsUnitTest.class);
 	/** The actual namingMain service impl bean */
