@@ -37,6 +37,7 @@ import javax.naming.InitialContext;
 import javax.naming.event.EventContext;
 import javax.naming.event.NamingEvent;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -78,21 +79,21 @@ class NamingEventsSubtreeUnitTest {
 		LOGGER.info("Added NamingListener");
 		ctx.bind("testAddObject", "testAddObject.bind");
 		LOGGER.info("Object bound");
-		assertTrue(listener.waitOnEvent(), "Saw bind event");
+		assertTrue(listener.waitOnEvent(2, TimeUnit.SECONDS), "Saw bind event");
 		NamingEvent event = listener.getEvent(0);
 		assertEquals(NamingEvent.OBJECT_ADDED, event.getType(), "OBJECT_ADDED");
 		assertNull(event.getOldBinding(), "getOldBinding");
 		assertEquals("testAddObject.bind", getValue(event.getNewBinding()));
 
 		ctx.rebind("testAddObject", "testAddObject.rebind");
-		assertTrue(listener.waitOnEvent(), "Saw rebind event");
+		assertTrue(listener.waitOnEvent(2, TimeUnit.SECONDS), "Saw rebind event");
 		event = listener.getEvent(1);
 		assertEquals(NamingEvent.OBJECT_CHANGED, event.getType(), "OBJECT_CHANGED");
 		assertEquals("testAddObject.bind", getValue(event.getOldBinding()));
 		assertEquals("testAddObject.rebind", getValue(event.getNewBinding()));
 
 		ctx.unbind("testAddObject");
-		assertTrue(listener.waitOnEvent(), "Saw unbind event");
+		assertTrue(listener.waitOnEvent(2, TimeUnit.SECONDS), "Saw unbind event");
 		event = listener.getEvent(2);
 		assertEquals(NamingEvent.OBJECT_REMOVED, event.getType(), "OBJECT_REMOVED");
 		assertEquals("testAddObject.rebind", getValue(event.getOldBinding()));
@@ -100,7 +101,7 @@ class NamingEventsSubtreeUnitTest {
 
 		// Create a subcontext
 		Context subctx = ctx.createSubcontext("subctx");
-		listener.waitOnEvent();
+		listener.waitOnEvent(2, TimeUnit.SECONDS);
 		assertEquals(4, listener.getEventCount(), "Should be 4 events");
 		event = listener.getEvent(3);
 		assertEquals(NamingEvent.OBJECT_ADDED, event.getType(), "OBJECT_ADDED");
@@ -109,7 +110,7 @@ class NamingEventsSubtreeUnitTest {
 
 		// Creating a binding under subctx should produce an event
 		subctx.bind("subctx.testAddObject", "testAddObject.subctx.bind");
-		assertTrue(listener.waitOnEvent(), "Wait on subctx bind");
+		assertTrue(listener.waitOnEvent(2, TimeUnit.SECONDS), "Wait on subctx bind");
 		event = listener.getEvent(4);
 		assertEquals(NamingEvent.OBJECT_ADDED, event.getType(), "OBJECT_ADDED");
 		LOGGER.info("Leaving AddRemoveSubtree");

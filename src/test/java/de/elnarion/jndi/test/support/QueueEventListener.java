@@ -21,30 +21,33 @@
  */
 package de.elnarion.jndi.test.support;
 
-import java.util.ArrayList;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.naming.event.NamespaceChangeListener;
 import javax.naming.event.NamingEvent;
 import javax.naming.event.NamingExceptionEvent;
 import javax.naming.event.ObjectChangeListener;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.ArrayList;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Scott.Stark@jboss.org
  */
 public class QueueEventListener implements ObjectChangeListener, NamespaceChangeListener {
 	private static final Logger LOGGER = LoggerFactory.getLogger(QueueEventListener.class);
-	private ArrayList<NamingEvent> events = new ArrayList<NamingEvent>();
-	private Semaphore eventCount = new Semaphore(0);
+	private final Semaphore eventCount = new Semaphore(0);
+	private final ArrayList<NamingEvent> events = new ArrayList<>();
+
 	@SuppressWarnings("unused")
-	private NamingExceptionEvent ex;
 
 	public boolean waitOnEvent() throws InterruptedException {
-		return eventCount.tryAcquire(1, TimeUnit.SECONDS);
+		return waitOnEvent(1, TimeUnit.SECONDS);
+	}
+
+	public boolean waitOnEvent(long timeout, TimeUnit timeUnit) throws InterruptedException {
+		return eventCount.tryAcquire(timeout, timeUnit);
 	}
 
 	public NamingEvent getEvent(int index) {
@@ -59,7 +62,7 @@ public class QueueEventListener implements ObjectChangeListener, NamespaceChange
 	}
 
 	public void namingExceptionThrown(NamingExceptionEvent evt) {
-		ex = evt;
+		// do nothing
 	}
 
 	public void objectAdded(NamingEvent evt) {
