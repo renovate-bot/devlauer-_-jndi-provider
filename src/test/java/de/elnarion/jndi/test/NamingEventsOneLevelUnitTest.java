@@ -25,10 +25,9 @@ import de.elnarion.jndi.interfaces.ValueWrapper;
 import de.elnarion.jndi.server.ExecutorEventMgr;
 import de.elnarion.jndi.server.NamingBeanImpl;
 import de.elnarion.jndi.test.support.QueueEventListener;
-import net.jcip.annotations.NotThreadSafe;
-import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.parallel.Execution;
-import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,11 +43,8 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * @author Scott.Stark@jboss.org
  */
-@NotThreadSafe
-@Execution(ExecutionMode.SAME_THREAD)
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class NamingEventsUnitTest {
-	private static final Logger LOGGER = LoggerFactory.getLogger(NamingEventsUnitTest.class);
+class NamingEventsOneLevelUnitTest {
+	private static final Logger LOGGER = LoggerFactory.getLogger(NamingEventsOneLevelUnitTest.class);
 	private final QueueEventListener listener = new QueueEventListener();
 	/** The actual namingMain service impl bean */
 	private NamingBeanImpl namingBean;
@@ -67,7 +63,6 @@ class NamingEventsUnitTest {
 	}
 
 	@Test
-	@Order(1)
 	void testAddRemoveOneLevel() throws Exception {
 		LOGGER.info("Entering AddRemoveOneLevel");
 		Properties env = new Properties();
@@ -115,59 +110,6 @@ class NamingEventsUnitTest {
 		assertFalse(listener.waitOnEvent(), "Wait on subctx bind");
 		assertEquals(4, listener.getEventCount(), "Still should be 4 events");
 		LOGGER.info("Leaving AddRemoveOneLevel");
-	}
-
-	@Test
-	@Order(2)
-	void testAddRemoveSubtree() throws Exception {
-		LOGGER.info("Entering AddRemoveSubtree");
-		Properties env = new Properties();
-		env.setProperty("java.naming.factory.initial", "de.elnarion.jndi.interfaces.LocalOnlyContextFactory");
-		env.setProperty("java.naming.factory.url.pkgs", "de.elnarion.jndi.interfaces");
-		InitialContext ic = new InitialContext(env);
-		LOGGER.info("Created InitialContext");
-		Context ctx = (Context) ic.lookup("");
-		assertTrue(ctx instanceof EventContext, "Context is an EventContext");
-		EventContext ectx = (EventContext) ctx;
-		ectx.addNamingListener("", EventContext.SUBTREE_SCOPE, listener);
-		LOGGER.info("Added NamingListener");
-		ctx.bind("testAddObject", "testAddObject.bind");
-		LOGGER.info("Object bound");
-		assertTrue(listener.waitOnEvent(), "Saw bind event");
-		NamingEvent event = listener.getEvent(0);
-		assertEquals(NamingEvent.OBJECT_ADDED, event.getType(), "OBJECT_ADDED");
-		assertNull(event.getOldBinding(), "getOldBinding");
-		assertEquals("testAddObject.bind", getValue(event.getNewBinding()));
-
-		ctx.rebind("testAddObject", "testAddObject.rebind");
-		assertTrue(listener.waitOnEvent(), "Saw rebind event");
-		event = listener.getEvent(1);
-		assertEquals(NamingEvent.OBJECT_CHANGED, event.getType(), "OBJECT_CHANGED");
-		assertEquals("testAddObject.bind", getValue(event.getOldBinding()));
-		assertEquals("testAddObject.rebind", getValue(event.getNewBinding()));
-
-		ctx.unbind("testAddObject");
-		assertTrue(listener.waitOnEvent(), "Saw unbind event");
-		event = listener.getEvent(2);
-		assertEquals(NamingEvent.OBJECT_REMOVED, event.getType(), "OBJECT_REMOVED");
-		assertEquals("testAddObject.rebind", getValue(event.getOldBinding()));
-		assertNull(event.getNewBinding(), "getNewBinding");
-
-		// Create a subcontext
-		Context subctx = ctx.createSubcontext("subctx");
-		listener.waitOnEvent();
-		assertEquals(4, listener.getEventCount(), "Should be 4 events");
-		event = listener.getEvent(3);
-		assertEquals(NamingEvent.OBJECT_ADDED, event.getType(), "OBJECT_ADDED");
-		assertNull(event.getOldBinding(), "getOldBinding");
-		assertEquals(subctx, getValue(event.getNewBinding()), "getNewBinding");
-
-		// Creating a binding under subctx should produce an event
-		subctx.bind("subctx.testAddObject", "testAddObject.subctx.bind");
-		assertTrue(listener.waitOnEvent(), "Wait on subctx bind");
-		event = listener.getEvent(4);
-		assertEquals(NamingEvent.OBJECT_ADDED, event.getType(), "OBJECT_ADDED");
-		LOGGER.info("Leaving AddRemoveSubtree");
 	}
 
 	protected Object getValue(Binding binding) {

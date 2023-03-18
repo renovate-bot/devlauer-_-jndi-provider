@@ -122,12 +122,6 @@
             <artifactId>junit-jupiter-api</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>com.github.stephenc.jcip</groupId>
-            <artifactId>jcip-annotations</artifactId>
-            <version>1.0-1</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
     <dependencyManagement>
         <dependencies>
@@ -190,8 +184,6 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <argLine>@{argLine}</argLine>
-                    <threadCount>1</threadCount>
-                    <forkCount>1</forkCount>
                 </configuration>
             </plugin>
         </plugins>
