@@ -1,78 +1,52 @@
 /*
-  * JBoss, Home of Professional Open Source
-  * Copyright 2005, JBoss Inc., and individual contributors as indicated
-  * by the @authors tag. See the copyright.txt in the distribution for a
-  * full listing of individual contributors.
-  *
-  * This is free software; you can redistribute it and/or modify it
-  * under the terms of the GNU Lesser General Public License as
-  * published by the Free Software Foundation; either version 2.1 of
-  * the License, or (at your option) any later version.
-  *
-  * This software is distributed in the hope that it will be useful,
-  * but WITHOUT ANY WARRANTY; without even the implied warranty of
-  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-  * Lesser General Public License for more details.
-  *
-  * You should have received a copy of the GNU Lesser General Public
-  * License along with this software; if not, write to the Free
-  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
-  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
-  */
+ * JBoss, Home of Professional Open Source
+ * Copyright 2005, JBoss Inc., and individual contributors as indicated
+ * by the @authors tag. See the copyright.txt in the distribution for a
+ * full listing of individual contributors.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
 package de.elnarion.jndi.interfaces;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Enumeration;
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.StringTokenizer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import javax.naming.Binding;
-import javax.naming.CannotProceedException;
-import javax.naming.CommunicationException;
-import javax.naming.Context;
-import javax.naming.ContextNotEmptyException;
-import javax.naming.InitialContext;
-import javax.naming.InvalidNameException;
-import javax.naming.LinkRef;
-import javax.naming.Name;
-import javax.naming.NameClassPair;
-import javax.naming.NameParser;
-import javax.naming.NamingEnumeration;
-import javax.naming.NamingException;
-import javax.naming.NotContextException;
-import javax.naming.Reference;
-import javax.naming.Referenceable;
-import javax.naming.ServiceUnavailableException;
+import javax.naming.*;
 import javax.naming.event.EventContext;
 import javax.naming.event.NamingListener;
 import javax.naming.spi.NamingManager;
 import javax.naming.spi.ResolveResult;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.io.IOException;
+import java.util.*;
 
 /**
  * This class provides the jnp provider Context implementation. It is a Context
  * interface wrapper for a RMI Naming instance that is obtained from either the
  * local server instance or by locating the server given by the
  * Context.PROVIDER_URL value.
- *
+ * <p>
  * This class also serves as the jnp url resolution context. jnp style urls
  * passed to the
- * 
+ *
  * @author oberg
  * @author scott.stark@jboss.org
  * @author Galder Zamarreño
  */
 public class NamingContext implements EventContext, java.io.Serializable {
 	// Constants -----------------------------------------------------
-	/**
-	 * @since 1.7
-	 */
-	static final long serialVersionUID = 8906455608484282128L;
 	/**
 	 * An internal property added by parseNameForScheme if the input name uses a url
 	 * prefix that was removed during cannonicalization. This is needed to avoid
@@ -93,14 +67,20 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 * The name to associate with Naming instance to use for the root Context
 	 */
 	public static final String JNP_NAMING_INSTANCE_NAME = "jnp.namingInstanceName";
-
 	/**
 	 * Whether or not the order of the provider list is significant. Default
 	 * behavior assumes that it is which can lead to bad behavior if one of the
 	 * initial URLs is not contactable.
 	 */
 	public static final String JNP_UNORDERED_PROVIDER_LIST = "jnp.unorderedProviderList";
-
+	/**
+	 * An obsolete constant replaced by the JNP_MAX_RETRIES value
+	 */
+	public static final int MAX_RETRIES = 1;
+	/**
+	 * @since 1.7
+	 */
+	static final long serialVersionUID = 8906455608484282128L;
 	/**
 	 * Global JNP unordered provider list system property:
 	 * -Djboss.global.jnp.unorderedProviderList=[true|false] At the VM level, this
@@ -109,40 +89,53 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 */
 	private static final String GLOBAL_UNORDERED_PROVIDER_LIST = System
 			.getProperty("jboss.global.jnp.unorderedProviderList", "false");
+	/**
+	 * The JBoss logging interface
+	 */
+	private static final Logger LOGGER = LoggerFactory.getLogger(NamingContext.class);
+	/**
+	 * The jvm local server used for non-transport access to the naming server
+	 *
+	 * @see #checkRef(Hashtable)
+	 */
+	private static Naming localServer;
+
+	// Static --------------------------------------------------------
+	// Attributes ----------------------------------------------------
+	transient Naming naming;
+	transient Hashtable<String, Object> env;
+	Name prefix;
+	transient NameParser parser = new NamingParser();
+
+	// Constructors --------------------------------------------------
+	@SuppressWarnings("unchecked")
+	public NamingContext(Hashtable<String, Object> e, Name baseName, Naming server) throws NamingException { // NOSONAR
+		// -
+		// Hashtable
+		// because
+		// of
+		// javax.naming
+		// use
+		if (baseName == null)
+			this.prefix = parser.parse("");
+		else
+			this.prefix = baseName;
+
+		if (e != null)
+			this.env = (Hashtable<String, Object>) e.clone();
+		else
+			this.env = new Hashtable<>();
+
+		this.naming = server;
+	}
+
+	// Static --------------------------------------------------------
 
 	public static String getSystemProperty(final String name, final String defaultValue) {
 		String prop;
 		prop = System.getProperty(name, defaultValue);
 		return prop;
 	}
-
-	/**
-	 * An obsolete constant replaced by the JNP_MAX_RETRIES value
-	 */
-	public static final int MAX_RETRIES = 1;
-	/**
-	 * The JBoss logging interface
-	 */
-	private static Logger log = LoggerFactory.getLogger(NamingContext.class);
-
-	// Static --------------------------------------------------------
-
-	/**
-	 * The jvm local server used for non-transport access to the naming server
-	 * 
-	 * @see #checkRef(Hashtable)
-	 * @see {@linkplain LocalOnlyContextFactory}
-	 */
-	private static Naming localServer;
-
-	// Attributes ----------------------------------------------------
-	transient Naming naming;
-	transient Hashtable<String, Object> env;
-	Name prefix;
-
-	transient NameParser parser = new NamingParser();
-
-	// Static --------------------------------------------------------
 
 	static void removeServer(Hashtable<String, Object> serverEnv) {
 		// JBAS-4622. Always do this.
@@ -194,28 +187,6 @@ public class NamingContext implements EventContext, java.io.Serializable {
 		localServer = server;
 	}
 
-	// Constructors --------------------------------------------------
-	@SuppressWarnings("unchecked")
-	public NamingContext(Hashtable<String, Object> e, Name baseName, Naming server) throws NamingException { // NOSONAR
-																												// -
-																												// Hashtable
-																												// because
-																												// of
-																												// javax.naming
-																												// use
-		if (baseName == null)
-			this.prefix = parser.parse("");
-		else
-			this.prefix = baseName;
-
-		if (e != null)
-			this.env = (Hashtable<String, Object>) e.clone();
-		else
-			this.env = new Hashtable<>();
-
-		this.naming = server;
-	}
-
 	// Public --------------------------------------------------------
 	public Naming getNaming() {
 		return this.naming;
@@ -259,12 +230,6 @@ public class NamingContext implements EventContext, java.io.Serializable {
 			cpe.setEnvironment(refEnv);
 			Context cctx = NamingManager.getContinuationContext(cpe);
 			cctx.rebind(cpe.getRemainingName(), obj);
-		} catch (IOException e) {
-			naming = null;
-			removeServer(refEnv);
-			NamingException ex = new CommunicationException();
-			ex.setRootCause(e);
-			throw ex;
 		}
 	}
 
@@ -305,12 +270,6 @@ public class NamingContext implements EventContext, java.io.Serializable {
 			cpe.setEnvironment(refEnv);
 			Context cctx = NamingManager.getContinuationContext(cpe);
 			cctx.bind(cpe.getRemainingName(), obj);
-		} catch (IOException e) {
-			naming = null;
-			removeServer(refEnv);
-			NamingException ex = new CommunicationException();
-			ex.setRootCause(e);
-			throw ex;
 		}
 	}
 
@@ -338,21 +297,11 @@ public class NamingContext implements EventContext, java.io.Serializable {
 			cpe.setEnvironment(refEnv);
 			Context cctx = NamingManager.getContinuationContext(cpe);
 			return cctx.lookup(cpe.getRemainingName());
-		} catch (IOException e) {
-			naming = null;
-			removeServer(refEnv);
-			NamingException ex = new CommunicationException();
-			ex.setRootCause(e);
-			throw ex;
-		} catch (ClassNotFoundException e) {
-			NamingException ex = new CommunicationException();
-			ex.setRootCause(e);
-			throw ex;
 		}
 	}
 
 	private Object getLookupObjectFromResource(Object res, Hashtable<String, Object> refEnv, Name name)
-			throws ClassNotFoundException, IOException, NamingException {
+			throws NamingException {
 		if (res instanceof ValueWrapper) {
 			ValueWrapper mvp = (ValueWrapper) res;
 			Object storedObj = mvp.get();
@@ -478,15 +427,13 @@ public class NamingContext implements EventContext, java.io.Serializable {
 
 		try {
 			// Get list
-			Collection<?> bindings = null;
+			Collection<Binding> bindings = null;
 			// Get list
 			bindings = naming.listBindings(getAbsoluteName(name));
 			Collection<Binding> realBindings = new ArrayList<>(bindings.size());
 
 			// Convert objects
-			Iterator<?> i = bindings.iterator();
-			while (i.hasNext()) {
-				Binding binding = (Binding) i.next();
+			for (Binding binding : bindings) {
 				Object obj = binding.getObject();
 				if (obj instanceof ValueWrapper) {
 					obj = extracted(obj);
@@ -500,16 +447,10 @@ public class NamingContext implements EventContext, java.io.Serializable {
 			cpe.setEnvironment(refEnv);
 			Context cctx = NamingManager.getContinuationContext(cpe);
 			return cctx.listBindings(cpe.getRemainingName());
-		} catch (IOException e) {
-			naming = null;
-			removeServer(refEnv);
-			NamingException ex = new CommunicationException();
-			ex.setRootCause(e);
-			throw ex;
 		}
 	}
 
-	private Object extracted(Object obj) throws IOException, NamingException {
+	private Object extracted(Object obj) {
 		return ((ValueWrapper) obj).get();
 	}
 
@@ -598,7 +539,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 * Lookup the object referred to by name but don't dereferrence the final
 	 * component. This really just involves returning the raw value returned by the
 	 * Naming.lookup() method.
-	 * 
+	 *
 	 * @return the raw object bound under name.
 	 */
 	public Object lookupLink(Name name) throws NamingException {
@@ -687,12 +628,12 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	}
 
 	protected boolean shouldDiscoveryHappen(boolean globalDisableDiscovery, String perCtxDisableDiscovery) {
-		boolean debug = log.isDebugEnabled();
+		boolean debug = LOGGER.isDebugEnabled();
 		if (!globalDisableDiscovery) {
 			// No global disable, so act as before.
 			if (Boolean.valueOf(perCtxDisableDiscovery) == Boolean.TRUE) {
 				if (debug)
-					log.debug("Skipping discovery due to disable flag in context");
+					LOGGER.debug("Skipping discovery due to disable flag in context");
 				return false;
 			}
 		} else {
@@ -700,7 +641,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 			// If disableDiscovery in context is explicitly set to false, do discovery.
 			if (perCtxDisableDiscovery == null || Boolean.valueOf(perCtxDisableDiscovery) == Boolean.TRUE) {
 				if (debug)
-					log.debug(
+					LOGGER.debug(
 							"Skipping discovery due to disable flag in context, or disable flag globally (and no override in context)");
 				return false;
 			}
@@ -717,10 +658,10 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 * the caller: RuntimePermission("createClassLoader")
 	 * ReflectPermission("suppressAccessChecks")
 	 * SerializablePermission("enableSubstitution")
-	 * 
+	 *
 	 * @return the ValueWrapper wrapping obj
 	 */
-	private Object createValuePair(final Object obj) throws IOException {
+	private Object createValuePair(final Object obj) {
 		ValueWrapper mvp = null;
 		mvp = new ValueWrapper(obj);
 		return mvp;
@@ -731,10 +672,10 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 * is supposed to be a context relative name according to the javaodcs for
 	 * NamingManager, but historically the absolute name of the target context has
 	 * been passed in.
-	 * 
+	 *
 	 * @param env - the env of NamingContext that op was called on
 	 * @return true if the legacy and technically incorrect absolute name should be
-	 *         used, false if the context relative name should be used.
+	 * used, false if the context relative name should be used.
 	 */
 	private boolean useAbsoluteName(Hashtable<String, Object> env) {
 		if (env == null)
@@ -746,12 +687,12 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	/**
 	 * Use the NamingManager.getStateToBind to obtain the actual object to bind into
 	 * jndi.
-	 * 
+	 *
 	 * @param obj  - the value passed to bind/rebind
 	 * @param name - the name passed to bind/rebind
 	 * @param env  - the env of NamingContext that bind/rebind was called on
 	 * @return the object to bind to the naming server
-	 * @throws NamingException
+	 * @throws NamingException namingException
 	 */
 	private Object getStateToBind(Object obj, Name name, Hashtable<String, Object> env) throws NamingException {
 		if (useAbsoluteName(env))
@@ -762,12 +703,12 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	/**
 	 * Use the NamingManager.getObjectInstance to resolve the raw object obtained
 	 * from the naming server.
-	 * 
+	 *
 	 * @param obj  - raw value obtained from the naming server
 	 * @param name - the name passed to the lookup op
 	 * @param env  - the env of NamingContext that the op was called on
 	 * @return the fully resolved object
-	 * @throws Exception
+	 * @throws Exception exception
 	 */
 	private Object getObjectInstance(Object obj, Name name, Hashtable<String, Object> env) throws Exception {
 		if (useAbsoluteName(env))
@@ -783,12 +724,12 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	/**
 	 * Resolve the final object and wrap any non-NamingException errors in a
 	 * NamingException with the cause passed as the root cause.
-	 * 
+	 *
 	 * @param obj  - raw value obtained from the naming server
 	 * @param name - the name passed to the lookup op
 	 * @param env  - the env of NamingContext that the op was called on
 	 * @return the fully resolved object
-	 * @throws NamingException
+	 * @throws NamingException namingexception
 	 */
 	private Object getObjectInstanceWrapFailure(Object obj, Name name, Hashtable<String, Object> env)
 			throws NamingException {
@@ -862,21 +803,20 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 * JBPAPP-8152/JBPAPP-8305. Check if the given exception is because the server
 	 * is in the middle of starting up or shuting down. If yes, we will flush out
 	 * the naming stub from our cache and acquire a new stub.
-	 *
+	 * <p>
 	 * Triggers on javax.naming.ServiceUnavailableException
 	 *
 	 * @param e      the exception that may be due to a server starting or stopping
 	 * @param refEnv the naming environment associated with the failed call
-	 * 
 	 * @return <code>true</code> if <code>e</code> indicates a starting or stopping
-	 *         server and we were able to succesfully flush the cache and acquire a
-	 *         new stub; <code>false</code> otherwise.
+	 * server and we were able to succesfully flush the cache and acquire a
+	 * new stub; <code>false</code> otherwise.
 	 */
 	private boolean handleServerStartupShutdown(Exception e, Hashtable<String, Object> refEnv) {
 		if (e instanceof ServiceUnavailableException) {
 			try {
-				if (log.isDebugEnabled()) {
-					log.debug("Call failed with ServiceUnavailableException, " + "flushing server cache and retrying",
+				if (LOGGER.isDebugEnabled()) {
+					LOGGER.debug("Call failed with ServiceUnavailableException, " + "flushing server cache and retrying",
 							e);
 				}
 				naming = null;
@@ -888,7 +828,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 			} catch (Exception e1) {
 				// Just log and return false; let caller continue processing
 				// the original exception passed in to this method
-				log.error("Caught exception flushing server cache and " + "re-establish naming after exception "
+				LOGGER.error("Caught exception flushing server cache and " + "re-establish naming after exception "
 						+ e.getLocalizedMessage(), e1);
 			}
 		}
