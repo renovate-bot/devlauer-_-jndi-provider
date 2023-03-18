@@ -67,6 +67,7 @@ class NamingEventsUnitTest {
 
 	@Test
 	void testAddRemoveOneLevel() throws Exception {
+		LOGGER.info("Entering AddRemoveOneLevel");
 		Properties env = new Properties();
 		env.setProperty("java.naming.factory.initial", "de.elnarion.jndi.interfaces.LocalOnlyContextFactory");
 		env.setProperty("java.naming.factory.url.pkgs", "de.elnarion.jndi.interfaces");
@@ -111,10 +112,12 @@ class NamingEventsUnitTest {
 		subctx.bind("subctx.testAddObject", "testAddObject.subctx.bind");
 		assertFalse(listener.waitOnEvent(), "Wait on subctx bind");
 		assertEquals(4, listener.getEventCount(), "Still should be 4 events");
+		LOGGER.info("Leaving AddRemoveOneLevel");
 	}
 
 	@Test
 	void testAddRemoveSubtree() throws Exception {
+		LOGGER.info("Entering AddRemoveSubtree");
 		Properties env = new Properties();
 		env.setProperty("java.naming.factory.initial", "de.elnarion.jndi.interfaces.LocalOnlyContextFactory");
 		env.setProperty("java.naming.factory.url.pkgs", "de.elnarion.jndi.interfaces");
@@ -161,6 +164,7 @@ class NamingEventsUnitTest {
 		assertTrue(listener.waitOnEvent(), "Wait on subctx bind");
 		event = listener.getEvent(4);
 		assertEquals(NamingEvent.OBJECT_ADDED, event.getType(), "OBJECT_ADDED");
+		LOGGER.info("Leaving AddRemoveSubtree");
 	}
 
 	protected Object getValue(Binding binding) throws ClassNotFoundException, IOException {
