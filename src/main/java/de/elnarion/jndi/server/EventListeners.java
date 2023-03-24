@@ -21,26 +21,21 @@
  */
 package de.elnarion.jndi.server;
 
-import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.naming.Binding;
 import javax.naming.Name;
 import javax.naming.NamingException;
-import javax.naming.event.EventContext;
-import javax.naming.event.NamespaceChangeListener;
-import javax.naming.event.NamingEvent;
-import javax.naming.event.NamingListener;
-import javax.naming.event.ObjectChangeListener;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import javax.naming.event.*;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * @author Scott.Stark@jboss.org
  */
 public class EventListeners {
-	private static Logger log = LoggerFactory.getLogger(EventListeners.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(EventListeners.class);
 	private EventContext context;
 	private CopyOnWriteArrayList<EventListenerInfo> listeners;
 
@@ -70,15 +65,14 @@ public class EventListeners {
 
 	public void fireEvent(Name fullName, Binding oldb, Binding newb, int type, String changeInfo, Set<Integer> scopes) {
 		if (listeners != null) {
-			log.debug("fireEvent, fullName:{} type: {}, changeInfo:{}, scopes:{}", fullName, type, changeInfo, scopes);
+			LOGGER.debug("fireEvent, fullName:{} type: {}, changeInfo:{}, scopes:{}", fullName, type, changeInfo, scopes);
 			String name = fullName.toString();
 			NamingEvent event = new NamingEvent(context, type, newb, oldb, changeInfo);
 			for (EventListenerInfo info : listeners) {
 				if (scopes.contains(info.getScope())) {
 					String targetName = info.getFullTargetName();
 					int scope = info.getScope();
-					boolean matches = false;
-					matches = checkIfMatches(fullName, name, targetName, scope);
+					boolean matches = checkIfMatches(fullName, name, targetName, scope);
 					if (matches)
 						dispatch(info.getListener(), event);
 				}
@@ -101,27 +95,27 @@ public class EventListeners {
 
 	public void dispatch(NamingListener listener, NamingEvent event) {
 		switch (event.getType()) {
-		case NamingEvent.OBJECT_ADDED:
-			if (listener instanceof NamespaceChangeListener)
-				((NamespaceChangeListener) listener).objectAdded(event);
-			break;
+			case NamingEvent.OBJECT_ADDED:
+				if (listener instanceof NamespaceChangeListener)
+					((NamespaceChangeListener) listener).objectAdded(event);
+				break;
 
-		case NamingEvent.OBJECT_REMOVED:
-			if (listener instanceof NamespaceChangeListener)
-				((NamespaceChangeListener) listener).objectRemoved(event);
-			break;
+			case NamingEvent.OBJECT_REMOVED:
+				if (listener instanceof NamespaceChangeListener)
+					((NamespaceChangeListener) listener).objectRemoved(event);
+				break;
 
-		case NamingEvent.OBJECT_RENAMED:
-			if (listener instanceof NamespaceChangeListener)
-				((NamespaceChangeListener) listener).objectRenamed(event);
-			break;
+			case NamingEvent.OBJECT_RENAMED:
+				if (listener instanceof NamespaceChangeListener)
+					((NamespaceChangeListener) listener).objectRenamed(event);
+				break;
 
-		case NamingEvent.OBJECT_CHANGED:
-			if (listener instanceof ObjectChangeListener)
-				((ObjectChangeListener) listener).objectChanged(event);
-			break;
-		default:
-			// do nothing
+			case NamingEvent.OBJECT_CHANGED:
+				if (listener instanceof ObjectChangeListener)
+					((ObjectChangeListener) listener).objectChanged(event);
+				break;
+			default:
+				// do nothing
 		}
 	}
 

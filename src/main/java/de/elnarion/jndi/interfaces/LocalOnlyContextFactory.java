@@ -21,21 +21,20 @@
  */
 package de.elnarion.jndi.interfaces;
 
-import java.lang.ref.WeakReference;
-import java.util.Hashtable;
-import java.util.concurrent.ConcurrentHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.naming.Context;
 import javax.naming.NamingException;
 import javax.naming.spi.InitialContextFactory;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.lang.ref.WeakReference;
+import java.util.Hashtable;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * An InitialContextFactory that uses the either NamingContex.localServer naming
  * server which has to have been set, or injected.
- * 
+ *
  * @author <a href="mailto:bill@jboss.org">Bill Burke</a>
  * @author Scott.Stark@jboss.org
  */
@@ -43,7 +42,7 @@ public class LocalOnlyContextFactory implements InitialContextFactory {
 	private static final Logger log = LoggerFactory.getLogger(LocalOnlyContextFactory.class);
 
 	/** A set of Naming instances with names */
-	private static ConcurrentHashMap<String, WeakReference<Naming>> localServers = new ConcurrentHashMap<>();
+	private static final ConcurrentHashMap<String, WeakReference<Naming>> localServers = new ConcurrentHashMap<>();
 	private Naming naming;
 
 	public Naming getNaming() {
@@ -52,7 +51,7 @@ public class LocalOnlyContextFactory implements InitialContextFactory {
 
 	/**
 	 * Set the Naming instance to use for the root content.
-	 * 
+	 *
 	 * @param naming - the Naming instance to use, null if the global
 	 *               NamingContext.getLocal value should be used.
 	 */
@@ -64,8 +63,8 @@ public class LocalOnlyContextFactory implements InitialContextFactory {
 	@SuppressWarnings("unchecked")
 	public Context getInitialContext(Hashtable<?, ?> env) throws NamingException {
 		log.debug("getInitialContext, env: {}", env);
-		String name = null;
-		Naming localServer = null;
+		String name;
+		Naming localServer;
 		localServer = ifEnvExistsGetLocalServerFromEnv(env);
 		name = ifEnvExistsGetNameFromEnv(env);
 		// Next try the injected naming instance
@@ -89,10 +88,10 @@ public class LocalOnlyContextFactory implements InitialContextFactory {
 			throw new NamingException("Failed to determine local server from: " + env);
 
 		// If this is a named instance add it to the localServers set
-		if (name != null ) {
-			final Naming localServerNaming=localServer;
-			localServers.computeIfAbsent(name, n ->new WeakReference<>(localServerNaming));
-				log.debug("Set localServers:{}", name);
+		if (name != null) {
+			final Naming localServerNaming = localServer;
+			localServers.computeIfAbsent(name, n -> new WeakReference<>(localServerNaming));
+			log.debug("Set localServers:{}", name);
 		}
 
 		// Pass in an empty env if its null

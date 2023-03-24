@@ -173,8 +173,7 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 
 				Binding newb = setBinding(name, obj, className);
 				// Notify event listeners
-				Binding oldb = null;
-				this.fireEvent(fullName, oldb, newb, NamingEvent.OBJECT_ADDED, "bind");
+				this.fireEvent(fullName, null, newb, NamingEvent.OBJECT_ADDED, "bind");
 			}
 		}
 	}
@@ -246,11 +245,10 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 				Name fullName = (Name) prefix.clone();
 				fullName.addAll(name);
 
-				Binding newb = null;
 				Binding oldb = removeBinding(name);
 				// Notify event listeners
 				int type = NamingEvent.OBJECT_REMOVED;
-				this.fireEvent(fullName, oldb, newb, type, "unbind");
+				this.fireEvent(fullName, oldb, null, type, "unbind");
 			}
 		}
 	}
@@ -376,8 +374,7 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 				Binding newb = new Binding(name.toString(), NamingContext.class.getName(), subCtx, true);
 				// Notify event listeners
 				if (listeners != null) {
-					Binding oldb = null;
-					this.fireEvent(fullName, oldb, newb, NamingEvent.OBJECT_ADDED, "createSubcontext");
+					this.fireEvent(fullName, null, newb, NamingEvent.OBJECT_ADDED, "createSubcontext");
 				}
 			}
 		}

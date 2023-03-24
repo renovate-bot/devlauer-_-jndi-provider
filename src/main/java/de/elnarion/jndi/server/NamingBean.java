@@ -25,9 +25,9 @@ import de.elnarion.jndi.interfaces.Naming;
 
 /**
  * Interface for the Main naming pojo.
- * 
+ *
  * @author Scott.Stark@jboss.org
  */
 public interface NamingBean {
-	public Naming getNamingInstance();
+	Naming getNamingInstance();
 }

@@ -290,8 +290,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 
 		try {
 			Name n = getAbsoluteName(name);
-			Object res = null;
-			res = lookupValueWithExceptionHandling(refEnv, n);
+			Object res = lookupValueWithExceptionHandling(refEnv, n);
 			return getLookupObjectFromResource(res, refEnv, name);
 		} catch (CannotProceedException cpe) {
 			cpe.setEnvironment(refEnv);
@@ -404,8 +403,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 			name = parsedName;
 
 		try {
-			Collection<NameClassPair> c = null;
-			c = naming.list(getAbsoluteName(name));
+			Collection<NameClassPair> c = naming.list(getAbsoluteName(name));
 			return new NameClassPairEnumerationImpl(c);
 		} catch (CannotProceedException cpe) {
 			cpe.setEnvironment(refEnv);
@@ -427,9 +425,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 
 		try {
 			// Get list
-			Collection<Binding> bindings = null;
-			// Get list
-			bindings = naming.listBindings(getAbsoluteName(name));
+			Collection<Binding> bindings = naming.listBindings(getAbsoluteName(name));
 			Collection<Binding> realBindings = new ArrayList<>(bindings.size());
 
 			// Convert objects
@@ -465,11 +461,11 @@ public class NamingContext implements EventContext, java.io.Serializable {
 		return result;
 	}
 
-	public NameParser getNameParser(String name) throws NamingException {
+	public NameParser getNameParser(String name) {
 		return parser;
 	}
 
-	public NameParser getNameParser(Name name) throws NamingException {
+	public NameParser getNameParser(Name name) {
 		return getNameParser(name.toString());
 	}
 
@@ -497,26 +493,26 @@ public class NamingContext implements EventContext, java.io.Serializable {
 		}
 	}
 
-	public Object addToEnvironment(String propName, Object propVal) throws NamingException {
+	public Object addToEnvironment(String propName, Object propVal) {
 		Object old = env.get(propName);
 		env.put(propName, propVal);
 		return old;
 	}
 
-	public Object removeFromEnvironment(String propName) throws NamingException {
+	public Object removeFromEnvironment(String propName) {
 		return env.remove(propName);
 	}
 
-	public Hashtable<String, Object> getEnvironment() throws NamingException {
+	public Hashtable<String, Object> getEnvironment() {
 		return env;
 	}
 
-	public void close() throws NamingException {
+	public void close() {
 		env = null;
 		naming = null;
 	}
 
-	public String getNameInNamespace() throws NamingException {
+	public String getNameInNamespace() {
 		return prefix.toString();
 	}
 
@@ -552,7 +548,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 		if (name.isEmpty())
 			return lookup(name);
 
-		Object link = null;
+		Object link;
 		try {
 			Name n = getAbsoluteName(name);
 			link = naming.lookup(n);
@@ -602,14 +598,12 @@ public class NamingContext implements EventContext, java.io.Serializable {
 			throw new UnsupportedOperationException("Naming implementation does not support NamingExt");
 		}
 		NamingEvents next = (NamingEvents) naming;
-		boolean targetMustExist = true;
-		targetMustExist = next.targetMustExist();
-		return targetMustExist;
+		return next.targetMustExist();
 	}
 	// End EventContext methods
 
 	protected Object resolveLink(Object res, Hashtable<String, Object> refEnv) throws NamingException {
-		Object linkResult = null;
+		Object linkResult;
 		try {
 			LinkRef link = (LinkRef) res;
 			String ref = link.getLinkName();
@@ -662,9 +656,7 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 * @return the ValueWrapper wrapping obj
 	 */
 	private Object createValuePair(final Object obj) {
-		ValueWrapper mvp = null;
-		mvp = new ValueWrapper(obj);
-		return mvp;
+		return new ValueWrapper(obj);
 	}
 
 	/**
