@@ -395,13 +395,12 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 			ex = new NotContextException();
 			ex.setResolvedName(name.getPrefix(0));
 			ex.setRemainingName(subCtxName);
-			throw ex;
 
 		} else {
 			ex = new NameNotFoundException();
 			ex.setRemainingName(name);
-			throw ex;
 		}
+		throw ex;
 	}
 
 	public Naming getRoot() {
