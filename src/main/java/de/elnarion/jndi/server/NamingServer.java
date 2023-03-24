@@ -48,13 +48,12 @@ public class NamingServer implements Naming, NamingEvents, java.io.Serializable 
 	private static final long serialVersionUID = 4183855539507934373L;
 	private static final Logger LOGGER = LoggerFactory.getLogger(NamingServer.class);
 	// Constants -----------------------------------------------------
-
+	protected final NamingParser parser = new NamingParser();
+	/**  */
+	protected final transient Map<String, Binding> table = createTable();
 	// Attributes ----------------------------------------------------
 	private final transient boolean debug;
-	/**  */
-	protected transient Map<String, Binding> table = createTable();
 	protected Name prefix;
-	protected NamingParser parser = new NamingParser();
 	protected NamingServer parent;
 	/** The NamingListeners registered with this context */
 	private transient EventListeners listeners;

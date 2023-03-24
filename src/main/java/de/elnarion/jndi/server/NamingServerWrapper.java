@@ -21,27 +21,22 @@
  */
 package de.elnarion.jndi.server;
 
-import java.util.Collection;
-
-import javax.naming.Binding;
-import javax.naming.Context;
-import javax.naming.Name;
-import javax.naming.NameClassPair;
-import javax.naming.NamingException;
-import javax.naming.event.EventContext;
-import javax.naming.event.NamingListener;
-
 import de.elnarion.jndi.interfaces.Naming;
 import de.elnarion.jndi.interfaces.NamingEvents;
+
+import javax.naming.*;
+import javax.naming.event.EventContext;
+import javax.naming.event.NamingListener;
+import java.util.Collection;
 
 /**
  * A delegating wrapper that can be used to create a unique rmi server endpoint
  * that shares the an underlying Naming server implementation.
- * 
+ *
  * @author Scott.Stark@jboss.org
  */
 public class NamingServerWrapper implements Naming, NamingEvents {
-	Naming delegate;
+	final Naming delegate;
 	NamingEvents edelegate;
 
 	NamingServerWrapper(Naming delegate) {

@@ -21,21 +21,20 @@
  */
 package de.elnarion.jndi.server;
 
+import javax.naming.Binding;
+import javax.naming.Name;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-import javax.naming.Binding;
-import javax.naming.Name;
-
 /**
  * An EventMgr implementation that uses an Executor to dispatch the events in
  * the background.
- * 
+ *
  * @author Scott.Stark@jboss.org
  */
 public class ExecutorEventMgr implements EventMgr {
-	
+
 	private Executor executor = Executors.newSingleThreadExecutor();
 
 	public Executor getExecutor() {
@@ -47,22 +46,22 @@ public class ExecutorEventMgr implements EventMgr {
 	}
 
 	public void fireEvent(Name fullName, Binding oldb, Binding newb, int type, String changeInfo,
-			EventListeners listeners, Set<Integer> scopes) {
+						  EventListeners listeners, Set<Integer> scopes) {
 		Dispatcher d = new Dispatcher(fullName, newb, oldb, type, changeInfo, listeners, scopes);
 		executor.execute(d);
 	}
 
 	static class Dispatcher implements Runnable {
-		Name fullName;
-		Binding oldb;
-		Binding newb;
-		int type;
-		String changeInfo;
-		EventListeners listeners;
-		Set<Integer> scopes;
+		final Name fullName;
+		final String changeInfo;
+		final EventListeners listeners;
+		final Binding oldb;
+		final Binding newb;
+		final int type;
+		final Set<Integer> scopes;
 
 		public Dispatcher(Name fullName, Binding newb, Binding oldb, int type, String changeInfo,
-				EventListeners listeners, Set<Integer> scopes) {
+						  EventListeners listeners, Set<Integer> scopes) {
 			this.fullName = fullName;
 			this.newb = newb;
 			this.oldb = oldb;

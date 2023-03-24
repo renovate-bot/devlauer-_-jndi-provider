@@ -99,13 +99,12 @@ public class NamingContext implements EventContext, java.io.Serializable {
 	 * @see #checkRef(Hashtable)
 	 */
 	private static Naming localServer;
-
+	final transient NameParser parser = new NamingParser();
 	// Static --------------------------------------------------------
 	// Attributes ----------------------------------------------------
 	transient Naming naming;
 	transient Hashtable<String, Object> env;
 	Name prefix;
-	transient NameParser parser = new NamingParser();
 
 	// Constructors --------------------------------------------------
 	@SuppressWarnings("unchecked")

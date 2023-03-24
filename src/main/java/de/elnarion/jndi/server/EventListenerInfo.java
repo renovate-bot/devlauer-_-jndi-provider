@@ -21,22 +21,18 @@
  */
 package de.elnarion.jndi.server;
 
-import javax.naming.event.NamespaceChangeListener;
-import javax.naming.event.NamingEvent;
-import javax.naming.event.NamingExceptionEvent;
-import javax.naming.event.NamingListener;
-import javax.naming.event.ObjectChangeListener;
+import javax.naming.event.*;
 
 /**
  * Encapsulation of the NamingListener, scope and EventContext the listener
  * registered with.
- * 
+ *
  * @author Scott.Stark@jboss.org
  */
 public class EventListenerInfo implements NamespaceChangeListener, ObjectChangeListener {
-	private NamingListener listener;
-	private String fullTargetName;
-	private int scope;
+	private final NamingListener listener;
+	private final String fullTargetName;
+	private final int scope;
 
 	public EventListenerInfo(NamingListener listener, String fullTargetName, int scope) {
 		super();
