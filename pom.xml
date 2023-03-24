@@ -15,7 +15,6 @@
     <url>https://github.com/devlauer/jndi-provider</url>
     <properties>
         <java.version>8</java.version>
-        <sonar.projectKey>devlauer_jndi-provider</sonar.projectKey>
     </properties>
     <issueManagement>
         <system>github</system>

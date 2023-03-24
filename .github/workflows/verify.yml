@@ -34,7 +34,7 @@ jobs:
           cache: 'maven'
       - name: Analyze with SonarCloud
         if: ${{steps.changed-files-specific.outputs.any_changed == 'true' && github.event_name != 'pull_request'}}
-        run: ./mvnw -B install verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.coverage.jacoco.xmlReportPaths=\${project.build.directory}/site/jacoco/jacoco.xml -Dsonar.projectKey=devlauer_jndi-provider
+        run: ./mvnw -B install verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.coverage.jacoco.xmlReportPaths=\${project.build.directory}/site/jacoco/jacoco.xml -Dsonar.projectKey=devlauer_jndi-provider -Dsonar.login=$SONAR_TOKEN
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
