@@ -10,11 +10,13 @@
     <artifactId>jndi-provider</artifactId>
     <version>1.1.1-SNAPSHOT</version>
     <packaging>jar</packaging>
-    <name>${project.groupId}:${project.artifactId}</name>
+    <name>jndi-provider</name>
     <description>A fork of JBoss JNPServer because it is not maintained anymore</description>
     <url>https://github.com/devlauer/jndi-provider</url>
     <properties>
         <java.version>8</java.version>
+        <sonar.organization>devlauer</sonar.organization>
+        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
     </properties>
     <issueManagement>
         <system>github</system>
