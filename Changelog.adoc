@@ -1,18 +1,16 @@
 = Changelog
 
 .Unreleased
-* nothing
+* code refactorings
 
 .1.1.0 - 06.03.2023
-* allow non serializable objects to bind
-(possible because of in memory/in process usage)
+* allow non serializable objects to bind (possible because of in memory/in process usage)
 
 .1.0.0 - 05.03.2023
 * forked from jnp-server
 * switched package names to new project to avoid protected names in package naming
-* remove all server functionality due to project focus on in-VM usage 
-* remove securitymanager handling because artifact is not usable via 
-remote connection anymore
+* remove all server functionality due to project focus on in-VM usage
+* remove securitymanager handling because artifact is not usable via remote connection anymore
 * refactor methods and fix compiler warnings
 * removed dependency to jboss-naming
 * removed dependency to jboss-common-core
