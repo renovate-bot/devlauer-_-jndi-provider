@@ -1,5 +1,4 @@
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>de.elnarion.maven</groupId>
@@ -8,7 +7,7 @@
     </parent>
     <groupId>de.elnarion.jndi</groupId>
     <artifactId>jndi-provider</artifactId>
-    <version>1.1.1-SNAPSHOT</version>
+    <version>1.1.1</version>
     <packaging>jar</packaging>
     <name>jndi-provider</name>
     <description>A fork of JBoss JNPServer because it is not maintained anymore</description>
@@ -170,6 +169,6 @@
         <url>http://github.com/devlauer/jndi-provider</url>
         <connection>scm:git:git@github.com:devlauer/jndi-provider.git</connection>
         <developerConnection>scm:git:git@github.com:devlauer/jndi-provider.git</developerConnection>
-        <tag>HEAD</tag>
+        <tag>jndi-provider-1.1.1</tag>
     </scm>
 </project>
