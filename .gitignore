@@ -5,3 +5,4 @@
 /.settings/
 /.asciidoctorconfig.adoc
 /jndi-provider.iml
+/.idea/.gitignore
