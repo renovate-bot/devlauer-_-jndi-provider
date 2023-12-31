@@ -1,7 +1,12 @@
 = Changelog
 
 .Unreleased
+
+.1.1.1 - 31.12.2023
 * code refactorings
+* update maven dependency to 3.9.6
+* update junit to 5.10.1
+* update elnarion-parent-pom to 2.0.10
 
 .1.1.0 - 06.03.2023
 * allow non serializable objects to bind (possible because of in memory/in process usage)
