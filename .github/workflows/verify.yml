@@ -20,7 +20,7 @@ jobs:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
       - name: Get changed source files or maven poms of all modules
         id: changed-files-specific
-        uses: tj-actions/changed-files@v36
+        uses: tj-actions/changed-files@v41
         with:
           files: |
             pom.xml
